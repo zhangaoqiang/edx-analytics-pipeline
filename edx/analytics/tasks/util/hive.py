@@ -5,10 +5,10 @@ import textwrap
 
 import luigi
 from luigi.configuration import get_config
-from luigi.hive import HiveQueryTask, HivePartitionTarget, HiveQueryRunner
+from luigi.hive import HiveQueryTask, HivePartitionTarget, HiveQueryRunner, HiveTableTarget, default_client, HiveCommandError
 from luigi.parameter import Parameter
 
-from edx.analytics.tasks.url import url_path_join, get_target_from_url
+from edx.analytics.tasks.url import url_path_join, get_target_from_url, get_target_class_from_url
 from edx.analytics.tasks.mysql_load import MysqlInsertTask
 from edx.analytics.tasks.util.overwrite import OverwriteOutputMixin
 
@@ -122,6 +122,138 @@ class HiveTableTask(WarehouseMixin, OverwriteOutputMixin, HiveQueryTask):
 
     def job_runner(self):
         return OverwriteAwareHiveQueryRunner()
+
+
+class BareHiveTableTask(WarehouseMixin, HiveQueryTask):
+
+    def query(self):
+        partition_clause = ''
+        if self.partition_by:
+            partition_clause = 'PARTITIONED BY ({partition_by} STRING)'.format(partition_by=self.partition_by)
+
+        query_format = """
+            USE {database_name};
+            CREATE EXTERNAL TABLE IF NOT EXISTS {table} (
+                {col_spec}
+            )
+            {partition_clause}
+            {table_format}
+            LOCATION '{location}';
+        """
+
+        query = query_format.format(
+            database_name=hive_database_name(),
+            table=self.table,
+            col_spec=','.join([' '.join(c) for c in self.columns]),
+            location=self.table_location,
+            table_format=self.table_format,
+            partition_clause=partition_clause,
+        )
+
+        query = textwrap.dedent(query)
+
+        return query
+
+    @property
+    def partition_by(self):
+        """The partitioning key name. Specify None to create a table that is not partitioned."""
+        raise None
+
+    @property
+    def table(self):
+        """Provides name of Hive database table."""
+        raise NotImplementedError
+
+    @property
+    def table_format(self):
+        """Provides format of Hive database table's data."""
+        return "ROW FORMAT DELIMITED FIELDS TERMINATED BY '\\t'"
+
+    @property
+    def table_location(self):
+        """Provides root location of Hive database table's data."""
+        return url_path_join(self.warehouse_path, self.table) + '/'
+
+    @property
+    def columns(self):
+        """
+        Provides definition of columns in Hive.
+
+        This should define a list of (name, definition) tuples, where
+        the definition defines the Hive type to use. For example,
+        ('first_name', 'STRING').
+
+        """
+        raise NotImplementedError
+
+    def output(self):
+        return HiveTableTarget(
+            self.table, database=hive_database_name()
+        )
+
+
+class HivePartitionTask(WarehouseMixin, HiveQueryTask):
+
+    partition_value = luigi.Parameter()
+
+    def query(self):
+        return "USE {database_name}; ALTER TABLE {table} ADD IF NOT EXISTS PARTITION ({partition.query_spec});".format(
+            database_name=hive_database_name(),
+            table=self.hive_table_task.table,
+            partition=self.partition
+        )
+
+    @property
+    def hive_table_task(self):
+        raise NotImplementedError
+
+    @property
+    def partition(self):
+        return HivePartition(self.hive_table_task.partition_by, self.partition_value)
+
+    @property
+    def partition_location(self):
+        return url_path_join(self.hive_table_task.table_location, self.partition.path_spec + '/')
+
+    def requires(self):
+        yield self.hive_table_task
+
+    def output(self):
+        # Figure out the type of target that should be used to write/read the file.
+        target_class, init_args, init_kwargs = get_target_class_from_url(self.partition_location)
+
+        # Ensure our constructed target inherits from the appropriate type of file target.
+        class HivePartitionTarget(HivePartitionTargetMixin, target_class):
+            pass
+
+        return HivePartitionTarget(self.hive_table_task.table, self.partition.as_dict(), self.partition_location)
+
+
+class HivePartitionTargetMixin(object):
+
+    def __init__(self, table, partition, partition_location):
+        super(HivePartitionTargetMixin, self).__init__(partition_location)
+
+        self.database = hive_database_name()
+        self.table = table
+        self.partition = partition
+        self.client = default_client
+        self.fail_missing_table = True
+
+    def exists(self):
+        try:
+            log.debug("Checking Hive table '{d}.{t}' for partition {p}".format(d=self.database, t=self.table, p=str(self.partition)))
+            return self.client.table_exists(self.table, self.database, self.partition)
+        except HiveCommandError, e:
+            if self.fail_missing_table:
+                raise
+            else:
+                if self.client.table_exists(self.table, self.database):
+                    # a real error occurred
+                    raise
+                else:
+                    # oh the table just doesn't exist
+                    return False
 
 
 class OverwriteAwareHiveQueryRunner(HiveQueryRunner):

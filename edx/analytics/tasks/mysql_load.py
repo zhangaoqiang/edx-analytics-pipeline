@@ -97,6 +97,10 @@ class MysqlInsertTask(MysqlInsertTaskMixin, luigi.Task):
         """List of tuples defining the names of the columns to include in each index."""
         return []
 
+    @property
+    def keys(self):
+        return []
+
     def create_table(self, connection):
         """
         Override to provide code for creating the target table, if not existing.
@@ -125,6 +129,8 @@ class MysqlInsertTask(MysqlInsertTaskMixin, luigi.Task):
             columns.append(("PRIMARY KEY", "({name})".format(name=self.auto_primary_key[0])))
         for indexed_cols in self.indexes:
             columns.append(("INDEX", "({cols})".format(cols=','.join(indexed_cols))))
+        for key in self.keys:
+            columns.append((key[0], "({cols})".format(cols=','.join(key[1]))))
 
         coldefs = ','.join(
             '{name} {definition}'.format(name=name, definition=definition) for name, definition in columns
