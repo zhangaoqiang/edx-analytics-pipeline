@@ -44,7 +44,7 @@ class DatabaseImportMixin(object):
         config_path={'section': 'database-import', 'name': 'credentials'}
     )
     database = luigi.Parameter(
-        default_from_config={'section': 'database-import', 'name': 'database'}
+        config_path={'section': 'database-import', 'name': 'database'}
     )
 
     import_date = luigi.DateParameter(default=None)

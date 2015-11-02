@@ -565,7 +565,7 @@ class PaypalTaskMixin(OverwriteOutputMixin):
     output_root = luigi.Parameter()
     date = luigi.DateParameter(default=datetime.datetime.utcnow().date())
     account_id = luigi.Parameter(
-        default_from_config={'section': 'paypal', 'name': 'account_id'}
+        config_path={'section': 'paypal', 'name': 'account_id'}
     )
 
 
@@ -672,7 +672,7 @@ class PaypalTransactionsIntervalTask(PaypalTaskMixin, WarehouseMixin, luigi.Wrap
     date = None
     interval = luigi.DateIntervalParameter(default=None)
     interval_start = luigi.DateParameter(
-        default_from_config={'section': 'paypal', 'name': 'interval_start'},
+        config_path={'section': 'paypal', 'name': 'interval_start'},
         significant=False
     )
     interval_end = luigi.DateParameter(default=datetime.datetime.utcnow().date(), significant=False)
