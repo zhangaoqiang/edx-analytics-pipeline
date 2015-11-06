@@ -2,21 +2,25 @@
 
 import logging
 
+import luigi
+import luigi.task
+
 from edx.analytics.tasks.mapreduce import MapReduceJobTaskMixin, MapReduceJobTask
 from edx.analytics.tasks.pathutil import EventLogSelectionDownstreamMixin, EventLogSelectionMixin
+from edx.analytics.tasks.url import get_target_from_url
+
 
 
 log = logging.getLogger(__name__)
 
 
 class EventTypeDistributionTask(EventLogSelectionMixin, MapReduceJobTask):
-    """Produce a dataset which tells which type of events occured in a given time interval"""
 
-    def requires(self):
-        kwargs = {
-            'interval': self.interval,
-        }
 
+    def output(self):
+        return get_target_from_url(self.output_root)
+
+    output_root = luigi.Parameter()
 
     def mapper(self, line):
         print("HELLO HERE I AM !!!! \n")

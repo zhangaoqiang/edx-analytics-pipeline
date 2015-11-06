@@ -197,7 +197,7 @@ class ImportLastCountryOfUserToHiveTestCase(unittest.TestCase):
     def test_requires(self):
         task = ImportLastCountryOfUserToHiveTask(**self._get_kwargs())
         required_task = task.requires()
-        self.assertEquals(required_task.output().path, 's3://output/path/dt=2014-01-01')
+        self.assertEquals(required_task.output.path, 's3://output/path/dt=2014-01-01')
 
 
 class QueryLastCountryPerCourseTaskTestCase(unittest.TestCase):
@@ -290,8 +290,8 @@ class InsertToMysqlCourseEnrollByCountryWorkflowTestCase(unittest.TestCase):
         task = InsertToMysqlCourseEnrollByCountryWorkflow(**self._get_kwargs())
         required_tasks = task.requires()
         self.assertEquals(len(required_tasks), 2)
-        self.assertEquals(required_tasks['credentials'].output().path, 's3://config/credentials/output-database.json')
-        self.assertEquals(required_tasks['insert_source'].output().path, 's3://output/course_country/path')
+        self.assertEquals(required_tasks['credentials'].output.path, 's3://config/credentials/output-database.json')
+        self.assertEquals(required_tasks['insert_source'].output.path, 's3://output/course_country/path')
 
     def test_requires_with_overwrite(self):
         kwargs = self._get_kwargs()
