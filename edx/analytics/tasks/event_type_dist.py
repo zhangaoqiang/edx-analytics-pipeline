@@ -12,7 +12,14 @@ log = logging.getLogger(__name__)
 class EventTypeDistributionTask(EventLogSelectionMixin, MapReduceJobTask):
     """Produce a dataset which tells which type of events occured in a given time interval"""
 
+    def requires(self):
+        kwargs = {
+            'interval': self.interval,
+        }
+
+
     def mapper(self, line):
+        print("HELLO HERE I AM !!!! \n")
         value = self.get_event_and_date_string(line)
         event, _date_string = value
 
@@ -27,4 +34,5 @@ class EventTypeDistributionTask(EventLogSelectionMixin, MapReduceJobTask):
     def reducer(self, key, values):
         event_date_type = key
         event_count = sum(values)
+        print (event_date_type + " ," + event_count)
         yield (event_date_type), event_count
