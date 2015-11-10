@@ -187,8 +187,8 @@ class TestEnrollmentsByWeek(unittest.TestCase):
 
         requires = task.requires()
 
-        source = requires['source'].output
-        offsets = requires['offsets'].output
+        source = requires['source'].output()
+        offsets = requires['offsets'].output()
         self.assertIsInstance(offsets, luigi.hdfs.HdfsTarget)
         self.assertEqual(offsets.format, luigi.hdfs.Plain)
 

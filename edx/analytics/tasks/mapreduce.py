@@ -215,7 +215,7 @@ class EmulatedMapReduceJobRunner(luigi.hadoop.JobRunner):
 
         reduce_input = self.group(map_output)
         try:
-            reduce_output = job.output.open('w')
+            reduce_output = job.output().open('w')
         except Exception:
             reduce_output = StringIO.StringIO()
 

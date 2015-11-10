@@ -287,18 +287,18 @@ class TestWeeklyAllUsersAndEnrollments(unittest.TestCase):
 
         requires = task.requires()
 
-        enrollments = requires['enrollments'].output
+        enrollments = requires['enrollments'].output()
         self.assertIsInstance(enrollments, luigi.hdfs.HdfsTarget)
         self.assertEqual(enrollments.format, luigi.hdfs.PlainDir)
 
-        offsets = requires['offsets'].output
+        offsets = requires['offsets'].output()
         self.assertIsInstance(offsets, luigi.hdfs.HdfsTarget)
         self.assertEqual(offsets.format, luigi.hdfs.Plain)
 
-        history = requires['history'].output
+        history = requires['history'].output()
         self.assertIsInstance(history, luigi.File)
 
-        registrations = requires['registrations'].output
+        registrations = requires['registrations'].output()
         self.assertIsInstance(requires['registrations'], UserRegistrationsPerDay)
         self.assertEqual(registrations.path, 's3://path/user_registrations_1900-01-01-2013-01-21.tsv')
         self.assertIsInstance(registrations, luigi.hdfs.HdfsTarget)
