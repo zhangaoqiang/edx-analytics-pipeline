@@ -16,6 +16,8 @@ class EventTypeDistributionTask(EventLogSelectionMixin, MapReduceJobTask):
 
     output_root = luigi.Parameter()
 
+    src = luigi.Parameter(is_list=True)
+
     def mapper(self, line):
         value = self.get_event_and_date_string(line)
         event, _date_string = value
