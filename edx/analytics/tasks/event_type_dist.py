@@ -22,15 +22,16 @@ class EventTypeDistributionTask(EventLogSelectionMixin, MapReduceJobTask):
         event, _date_string = value
         event_type = str(event.get('event_type'))
         event_date = str(event.get('time')).split("T")[0]
+        event_source = str(event.get('event_source'))
         if event_type.startswith('/'):
             # Ignore events that begin with a slash
             return
-        yield (event_date, event_type), 1
+        yield (event_date, event_type, event_source), 1
 
     def reducer(self, key, values):
-        event_date_type = key
+        event_date_type_source = key
         event_count = sum(values)
-        yield (event_date_type), event_count
+        yield (event_date_type_source), event_count
 
     def output(self):
             return get_target_from_url(url_path_join(self.output_root, 'testfile.txt'))
