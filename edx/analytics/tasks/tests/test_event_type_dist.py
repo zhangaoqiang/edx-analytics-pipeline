@@ -81,14 +81,14 @@ class CourseEnrollmentTaskReducerTest(ReducerTestMixin, unittest.TestCase):
 
     def test_multiple_events(self):
         inputs = [
-            (('2013-01-01T00:00:01', "problem_check"), 1),
-            (('2013-01-01T00:00:01', "problem_check"), 1),
-            (('2013-02-01T00:00:01', "problem_check"), 1),
-            (('2013-02-01T00:00:01', "dummy_event"), 1),
-            (('2013-03-01T00:00:01', "dummy_event_2"), 1),
+            (('2013-01-01T00:00:01', "problem_check","chrome"), 1),
+            (('2013-01-01T00:00:01', "problem_check","chrome"), 1),
+            (('2013-02-01T00:00:01', "problem_check","safari"), 1),
+            (('2013-02-01T00:00:01', "dummy_event","chrome"), 1),
+            (('2013-03-01T00:00:01', "dummy_event_2","mozilla"), 1),
         ]
-        expected = (('2013-01-01T00:00:01', "problem_check", 2),
-                    ('2013-02-01T00:00:01', "problem_check", 1),
-                    ('2013-02-01T00:00:01', "dummy_event", 1),
-                    ('2013-03-01T00:00:01', "dummy_event_2", 1),)
+        expected = (('2013-01-01T00:00:01', "problem_check","chrome", 2),
+                    ('2013-02-01T00:00:01', "problem_check","safari", 1),
+                    ('2013-02-01T00:00:01', "dummy_event","chrome", 1),
+                    ('2013-03-01T00:00:01', "dummy_event_2","mozilla", 1),)
         self._check_output_complete_tuple(inputs, expected)
