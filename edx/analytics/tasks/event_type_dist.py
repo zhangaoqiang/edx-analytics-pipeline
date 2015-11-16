@@ -14,8 +14,6 @@ log = logging.getLogger(__name__)
 class EventTypeDistributionTask(EventLogSelectionMixin, MapReduceJobTask):
 
     output_root = luigi.Parameter()
-    src = luigi.Parameter(is_list=True)
-    n_reduce_tasks = luigi.Parameter()
 
     def mapper(self, line):
         value = self.get_event_and_date_string(line)
@@ -34,7 +32,7 @@ class EventTypeDistributionTask(EventLogSelectionMixin, MapReduceJobTask):
         yield (event_date_type_source), event_count
 
     def output(self):
-            return get_target_from_url(url_path_join(self.output_root, 'testfile.txt'))
+            return get_target_from_url(url_path_join(self.output_root, 'LoadEventTypeDistributionToVertica'))
 
 
 class PushToVertica(VerticaCopyTask):
@@ -54,7 +52,5 @@ class PushToVertica(VerticaCopyTask):
     def insert_source_task(self):
        EventTypeDistributionTask(
                 output_root=self.output_root,
-                n_reduce_tasks=self.n_reduce_tasks,
-                src=self.src,
             )
        return None
