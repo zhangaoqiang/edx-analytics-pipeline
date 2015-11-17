@@ -35,7 +35,7 @@ class EventTypeDistributionTask(EventLogSelectionMixin, MapReduceJobTask):
             return get_target_from_url(url_path_join(self.output_root, 'LoadEventTypeDistributionToVertica'))
 
 
-class PushToVertica(VerticaCopyTask):
+class PushToVerticaEventTypeDistributionTask(VerticaCopyTask):
     @property
     def table(self):
         return "event_type_distribution"
@@ -50,6 +50,7 @@ class PushToVertica(VerticaCopyTask):
 
     @property
     def insert_source_task(self):
+
        EventTypeDistributionTask(
                 output_root=self.output_root,
             )
