@@ -35,7 +35,10 @@ class EventTypeDistributionTask(EventLogSelectionMixin, MapReduceJobTask):
             return get_target_from_url(url_path_join(self.output_root, 'LoadEventTypeDistributionToVertica'))
 
 
-class PushToVerticaEventTypeDistributionTask(VerticaCopyTask):
+class PushToVerticaEventTypeDistributionTask(VerticaCopyTask,EventLogSelectionMixin,MapReduceJobTask):
+
+    output_root = luigi.Parameter()
+
     @property
     def table(self):
         return "event_type_distribution"
@@ -43,15 +46,17 @@ class PushToVerticaEventTypeDistributionTask(VerticaCopyTask):
     @property
     def columns(self):
         return [
-            ('date', 'DATETIME'),
+            ('event_date', 'DATETIME'),
             ('event_type', 'VARCHAR(255)'),
+            ('event_source', 'VARCHAR(255)'),
             ('event_count', 'INT'),
         ]
 
     @property
     def insert_source_task(self):
-
        EventTypeDistributionTask(
                 output_root=self.output_root,
+                interval=self.interval,
+                n_reduce_tasks=self.n_reduce_tasks,
             )
        return None
