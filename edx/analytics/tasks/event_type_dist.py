@@ -17,15 +17,19 @@ class EventTypeDistributionTask(EventLogSelectionMixin, MapReduceJobTask):
 
     def mapper(self, line):
         value = self.get_event_and_date_string(line)
+        if value is None:
+            return
         event, _date_string = value
         event_type = str(event.get('event_type'))
         event_date = str(event.get('time')).split("T")[0]
         event_source = str(event.get('event_source'))
-        log.info('event_type : %s',event_type)
-        log.info('event_date : %s',event_date)
-        log.info('event_source : %s',event_source)
-        if event_type is None or event_date is None or event_source is None:
-            return
+
+    #    log.info('event_type : %s',event_type)
+    #    log.info('event_date : %s',event_date)
+    #    log.info('event_source : %s',event_source)
+    #    if event_type is None or event_date is None or event_source is None:
+    #        return
+
         if event_type.startswith('/'):
             # Ignore events that begin with a slash
             return
