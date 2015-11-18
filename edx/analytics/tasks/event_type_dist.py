@@ -66,9 +66,8 @@ class PushToVerticaEventTypeDistributionTask(VerticaCopyTask):
 
     @property
     def insert_source_task(self):
-       EventTypeDistributionTask(
+       return EventTypeDistributionTask(
                 output_root=self.output_root,
                 interval=self.interval,
                 n_reduce_tasks=self.n_reduce_tasks,
             )
-       return None
