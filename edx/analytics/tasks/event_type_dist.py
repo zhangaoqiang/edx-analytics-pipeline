@@ -21,7 +21,7 @@ class EventTypeDistributionTask(EventLogSelectionMixin, MapReduceJobTask):
         event_type = str(event.get('event_type'))
         event_date = str(event.get('time')).split("T")[0]
         event_source = str(event.get('event_source'))
-        if event_type == None:
+        if event_type == None or event_date == None or event_source == None:
             return
         if event_type.startswith('/'):
             # Ignore events that begin with a slash
