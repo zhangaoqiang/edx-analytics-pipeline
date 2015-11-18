@@ -21,6 +21,8 @@ class EventTypeDistributionTask(EventLogSelectionMixin, MapReduceJobTask):
         event_type = str(event.get('event_type'))
         event_date = str(event.get('time')).split("T")[0]
         event_source = str(event.get('event_source'))
+        if event_type == None:
+            return
         if event_type.startswith('/'):
             # Ignore events that begin with a slash
             return
@@ -35,9 +37,12 @@ class EventTypeDistributionTask(EventLogSelectionMixin, MapReduceJobTask):
             return get_target_from_url(url_path_join(self.output_root, 'LoadEventTypeDistributionToVertica'))
 
 
-class PushToVerticaEventTypeDistributionTask(VerticaCopyTask,EventLogSelectionMixin,MapReduceJobTask):
+class PushToVerticaEventTypeDistributionTask(VerticaCopyTask):
 
     output_root = luigi.Parameter()
+    interval = luigi.Parameter()
+    n_reduce_tasks = luigi.Parameter()
+
 
     @property
     def table(self):
