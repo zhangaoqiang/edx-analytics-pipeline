@@ -1,4 +1,4 @@
-"""event_type values being encountered on each day in a given time interval"""
+"""event_type and event_source values being encountered on each day in a given time interval"""
 
 import logging
 import luigi
@@ -20,13 +20,13 @@ class EventTypeDistributionTask(EventLogSelectionMixin, MapReduceJobTask):
         if value is None:
             return
         event, _date_string = value
-        event_type = str(event.get('event_type'))
-        event_date = str(event.get('time')).split("T")[0]
-        event_source = str(event.get('event_source'))
+        event_type = event.get('event_type')
+        event_date = event.get('time').split("T")[0]
+        event_source = event.get('event_source')
         if event_type.startswith('/'):
             # Ignore events that begin with a slash
             return
-        log.info("key : %s",event_date+','+event_type+','+event_source)
+        log.info(type(event_type))
         yield (event_date, event_type, event_source), 1
 
     def reducer(self, key, values):
