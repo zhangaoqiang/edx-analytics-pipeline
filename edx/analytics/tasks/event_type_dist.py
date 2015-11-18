@@ -47,7 +47,7 @@ class EventTypeDistributionTask(EventLogSelectionMixin, MapReduceJobTask):
 class PushToVerticaEventTypeDistributionTask(VerticaCopyTask):
 
     output_root = luigi.Parameter()
-    interval = luigi.Parameter()
+    interval = luigi.DateIntervalParameter()
     n_reduce_tasks = luigi.Parameter()
 
 
