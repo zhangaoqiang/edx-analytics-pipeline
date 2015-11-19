@@ -35,7 +35,7 @@ class EventTypeDistributionTask(EventLogSelectionMixin, MapReduceJobTask):
         yield (event_date_type_source), event_count
 
     def output(self):
-            return get_target_from_url(url_path_join(self.output_root, 'LoadEventTypeDistributionToVertica'))
+            return get_target_from_url(url_path_join(self.output_root, 'LoadEventTypeDistributionToVertica/'))
 
 
 class PushToVerticaEventTypeDistributionTask(VerticaCopyTask):
