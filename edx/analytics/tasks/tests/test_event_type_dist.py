@@ -15,19 +15,13 @@ from edx.analytics.tasks.tests.opaque_key_mixins import InitializeOpaqueKeysMixi
 class EventTypeDistributionBaseTest(MapperTestMixin, ReducerTestMixin, unittest.TestCase):
     """ Base test class for Event type distribution task """
 
-    def initialize_ids(self):
-        """Define set of id values for use in tests."""
-        raise NotImplementedError
-
     def setUp(self):
-        self.task_class = ProblemCheckEventMixin
+        self.task_class = EventTypeDistributionTask
         super(EventTypeDistributionBaseTest, self).setUp()
 
-        self.initialize_ids()
-        self.username = 'test_user'
-        self.user_id = 24
-        self.timestamp = "2013-12-17T15:38:32.805444"
-        self.earlier_timestamp = "2013-12-15T15:38:32.805444"
+        self.event_date = "2013-12-17"
+        self.event_type = "problem_check"
+        self.event_source = "browser"
         self.reduce_key = (self.event_date, self.event_type, self.event_source)  # pylint: disable=no-member
 
 class EventTypeDistributionTaskMapTest(EventTypeDistributionBaseTest, InitializeOpaqueKeysMixin):
@@ -42,7 +36,7 @@ class EventTypeDistributionTaskMapTest(EventTypeDistributionBaseTest, Initialize
         self.assert_no_map_output_for(line)
 
     def test_event_type_should_not_begin_with_a_slash(self):
-        line = self.create_event_log_line(event_type='/event')
+        line = self.create_event_log_line(event_type='//event')
         self.assert_no_map_output_for(line)
 
     def test_event_type_should_not_be_none(self):
@@ -52,7 +46,7 @@ class EventTypeDistributionTaskMapTest(EventTypeDistributionBaseTest, Initialize
 
 
 
-class CourseEnrollmentTaskReducerTest(EventTypeDistributionBaseTest, InitializeOpaqueKeysMixin):
+class EventTypeDistributionTaskReducerTest(EventTypeDistributionBaseTest, InitializeOpaqueKeysMixin):
     """
     Tests to verify that events-per-day-per-type reducer works correctly.
     """
