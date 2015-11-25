@@ -12,7 +12,6 @@ log = logging.getLogger(__name__)
 
 
 class EventTypeDistributionTask(EventLogSelectionMixin, MapReduceJobTask):
-
     output_root = luigi.Parameter()
 
     def mapper(self, line):
@@ -23,10 +22,12 @@ class EventTypeDistributionTask(EventLogSelectionMixin, MapReduceJobTask):
         event_type = event.get('event_type')
         event_date = date_string
         event_source = event.get('event_source')
+        if event_source == None or event_type == None or event_date == None:
+            # Ignore if any of the keys is None
+            return
         if event_type.startswith('/'):
             # Ignore events that begin with a slash
             return
-        log.info(type(event_type))
         yield (event_date, event_type, event_source), 1
 
     def reducer(self, key, values):
@@ -35,15 +36,13 @@ class EventTypeDistributionTask(EventLogSelectionMixin, MapReduceJobTask):
         yield (event_date_type_source), event_count
 
     def output(self):
-            return get_target_from_url(url_path_join(self.output_root, 'LoadEventTypeDistributionToVertica/'))
+        return get_target_from_url(url_path_join(self.output_root, 'event_type_distribution/'))
 
 
 class PushToVerticaEventTypeDistributionTask(VerticaCopyTask):
-
     output_root = luigi.Parameter()
     interval = luigi.DateIntervalParameter()
     n_reduce_tasks = luigi.Parameter()
-
 
     @property
     def table(self):
@@ -60,8 +59,8 @@ class PushToVerticaEventTypeDistributionTask(VerticaCopyTask):
 
     @property
     def insert_source_task(self):
-       return EventTypeDistributionTask(
-                output_root=self.output_root,
-                interval=self.interval,
-                n_reduce_tasks=self.n_reduce_tasks,
-            )
+        return EventTypeDistributionTask(
+            output_root=self.output_root,
+            interval=self.interval,
+            n_reduce_tasks=self.n_reduce_tasks,
+        )
