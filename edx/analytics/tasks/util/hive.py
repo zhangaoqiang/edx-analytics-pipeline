@@ -124,15 +124,21 @@ class HiveTableTask(WarehouseMixin, OverwriteOutputMixin, HiveQueryTask):
         return OverwriteAwareHiveQueryRunner()
 
 
-class BareHiveTableTask(WarehouseMixin, HiveQueryTask):
+class BareHiveTableTask(WarehouseMixin, OverwriteOutputMixin, HiveQueryTask):
 
     def query(self):
         partition_clause = ''
         if self.partition_by:
             partition_clause = 'PARTITIONED BY ({partition_by} STRING)'.format(partition_by=self.partition_by)
 
+        if self.overwrite:
+            drop_on_overwrite = 'DROP TABLE IF EXISTS {table};'.format(self.table)
+        else:
+            drop_on_overwrite = ''
+
         query_format = """
             USE {database_name};
+            {drop_on_overwrite}
             CREATE EXTERNAL TABLE IF NOT EXISTS {table} (
                 {col_spec}
             )
@@ -148,6 +154,7 @@ class BareHiveTableTask(WarehouseMixin, HiveQueryTask):
             location=self.table_location,
             table_format=self.table_format,
             partition_clause=partition_clause,
+            drop_on_overwrite=drop_on_overwrite
         )
 
         query = textwrap.dedent(query)
@@ -191,16 +198,32 @@ class BareHiveTableTask(WarehouseMixin, HiveQueryTask):
             self.table, database=hive_database_name()
         )
 
+    def job_runner(self):
+        return OverwriteAwareHiveQueryRunner()
 
-class HivePartitionTask(WarehouseMixin, HiveQueryTask):
+    def remove_output_on_overwrite(self):
+        if self.overwrite:
+            self.attempted_removal = True
+
+
+class HivePartitionTask(WarehouseMixin, OverwriteOutputMixin, HiveQueryTask):
 
     partition_value = luigi.Parameter()
 
     def query(self):
-        return "USE {database_name}; ALTER TABLE {table} ADD IF NOT EXISTS PARTITION ({partition.query_spec});".format(
+        if self.overwrite:
+            drop_on_overwrite = 'ALTER TABLE {table} DROP IF EXISTS PARTITION ({partition.query_spec});'.format(
+                table=self.hive_table_task.table,
+                partition=self.partition
+            )
+        else:
+            drop_on_overwrite = ''
+
+        return "USE {database_name}; {drop_on_overwrite} ALTER TABLE {table} ADD IF NOT EXISTS PARTITION ({partition.query_spec});".format(
             database_name=hive_database_name(),
             table=self.hive_table_task.table,
-            partition=self.partition
+            partition=self.partition,
+            drop_on_overwrite=drop_on_overwrite
         )
 
     @property
@@ -219,41 +242,16 @@ class HivePartitionTask(WarehouseMixin, HiveQueryTask):
         yield self.hive_table_task
 
     def output(self):
-        # Figure out the type of target that should be used to write/read the file.
-        target_class, init_args, init_kwargs = get_target_class_from_url(self.partition_location)
+        return HivePartitionTarget(
+            self.hive_table_task.table, self.partition.as_dict(), database=hive_database_name(), fail_missing_table=True
+        )
 
-        # Ensure our constructed target inherits from the appropriate type of file target.
-        class HivePartitionTarget(HivePartitionTargetMixin, target_class):
-            pass
+    def job_runner(self):
+        return OverwriteAwareHiveQueryRunner()
 
-        return HivePartitionTarget(self.hive_table_task.table, self.partition.as_dict(), self.partition_location)
-
-
-class HivePartitionTargetMixin(object):
-
-    def __init__(self, table, partition, partition_location):
-        super(HivePartitionTargetMixin, self).__init__(partition_location)
-
-        self.database = hive_database_name()
-        self.table = table
-        self.partition = partition
-        self.client = default_client
-        self.fail_missing_table = True
-
-    def exists(self):
-        try:
-            log.debug("Checking Hive table '{d}.{t}' for partition {p}".format(d=self.database, t=self.table, p=str(self.partition)))
-            return self.client.table_exists(self.table, self.database, self.partition)
-        except HiveCommandError, e:
-            if self.fail_missing_table:
-                raise
-            else:
-                if self.client.table_exists(self.table, self.database):
-                    # a real error occurred
-                    raise
-                else:
-                    # oh the table just doesn't exist
-                    return False
+    def remove_output_on_overwrite(self):
+        if self.overwrite:
+            self.attempted_removal = True
 
 
 class OverwriteAwareHiveQueryRunner(HiveQueryRunner):

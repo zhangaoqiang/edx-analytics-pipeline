@@ -46,7 +46,7 @@ class EngagementRecord(Record):
 
 
 class EngagementDownstreamMixin(
-    OverwriteOutputMixin, WarehouseMixin, MapReduceJobTaskMixin, EventLogSelectionDownstreamMixin
+    WarehouseMixin, MapReduceJobTaskMixin, EventLogSelectionDownstreamMixin
 ):
     """Common parameters and base classes used to pass parameters through the engagement workflow"""
 
@@ -129,12 +129,17 @@ class EngagementTask(EventLogSelectionMixin, OverwriteOutputMixin, MapReduceJobT
             entity_id = event_data.get('id')
         elif event_type.startswith('edx.forum.'):
             entity_type = 'forum'
-            if event_type == 'edx.forum.comment.created':
-                events.append('commented')
-            elif event_type == 'edx.forum.response.created':
-                events.append('responded')
-            elif event_type == 'edx.forum.thread.created':
-                events.append('created')
+            if event_type.endswith('.created'):
+                if event_type == 'edx.forum.comment.created':
+                    events.append('commented')
+                elif event_type == 'edx.forum.response.created':
+                    events.append('responded')
+                elif event_type == 'edx.forum.thread.created':
+                    events.append('created')
+            elif event_type.endswith('.voted'):
+                if event_data.get('vote_value') == 'up' and not event_data.get('undo_vote', False):
+                    events.append('up_voted')
+
             entity_id = event_data.get('commentable_id')
 
         if not entity_id or not entity_type:
@@ -144,7 +149,7 @@ class EngagementTask(EventLogSelectionMixin, OverwriteOutputMixin, MapReduceJobT
             record = EngagementRecord(
                 course_id=course_id,
                 username=username,
-                date=DateField.value_from_string(date_string),
+                date=DateField().deserialize_from_string(date_string),
                 entity_type=entity_type,
                 entity_id=entity_id,
                 event=event,
@@ -176,7 +181,7 @@ class EngagementTableTask(BareHiveTableTask):
 
     @property
     def columns(self):
-        return EngagementRecord.to_hive_schema()
+        return EngagementRecord.get_hive_schema()
 
 
 class EngagementPartitionTask(EngagementDownstreamMixin, HivePartitionTask):
@@ -192,13 +197,17 @@ class EngagementPartitionTask(EngagementDownstreamMixin, HivePartitionTask):
         )
 
     def requires(self):
-        yield EngagementTask(
+        yield self.data_task
+        yield self.hive_table_task
+
+    @property
+    def data_task(self):
+        return EngagementTask(
             date=self.date,
             n_reduce_tasks=self.n_reduce_tasks,
             output_root=self.partition_location,
             overwrite=self.overwrite,
         )
-        yield self.hive_table_task
 
 
 class EngagementMysqlTask(EngagementDownstreamMixin, MysqlInsertTask):
@@ -224,7 +233,7 @@ class EngagementMysqlTask(EngagementDownstreamMixin, MysqlInsertTask):
             try:
                 query = "DELETE FROM {marker_table} where `update_id`='{update_id}'".format(
                     marker_table=marker_table,
-                    update_id=self.update_id,
+                    update_id=self.update_id(),
                 )
                 connection.cursor().execute(query)
             except mysql.connector.Error as excp:  # handle the case where the marker_table has yet to be created
@@ -245,7 +254,7 @@ class EngagementMysqlTask(EngagementDownstreamMixin, MysqlInsertTask):
 
     @property
     def columns(self):
-        return EngagementRecord.to_sql_schema()
+        return EngagementRecord.get_sql_schema()
 
     @property
     def keys(self):
@@ -273,24 +282,24 @@ class EngagementMysqlTask(EngagementDownstreamMixin, MysqlInsertTask):
 
     @property
     def insert_source_task(self):
-        return EngagementTask(
+        partition_task = EngagementPartitionTask(
             date=self.date,
             n_reduce_tasks=self.n_reduce_tasks,
-            warehouse_path=self.warehouse_path,
             overwrite=self.overwrite,
         )
+        return partition_task.data_task
 
 
 class EngagementVerticaTask(EngagementDownstreamMixin, VerticaCopyTask):
 
     @property
     def insert_source_task(self):
-        return EngagementTask(
+        partition_task = EngagementPartitionTask(
             date=self.date,
             n_reduce_tasks=self.n_reduce_tasks,
-            warehouse_path=self.warehouse_path,
             overwrite=self.overwrite,
         )
+        return partition_task.data_task
 
     @property
     def table(self):
@@ -303,7 +312,7 @@ class EngagementVerticaTask(EngagementDownstreamMixin, VerticaCopyTask):
 
     @property
     def columns(self):
-        return EngagementRecord.to_sql_schema()
+        return EngagementRecord.get_sql_schema()
 
 
 class OptionalVerticaMixin(object):
@@ -333,187 +342,28 @@ class EngagementIntervalTask(
     """Compute engagement information over a range of dates and insert the results into Hive, Vertica and MySQL"""
 
     def requires(self):
-        # Store the requirements like this, since downstream jobs will directly process the Hive partitions using
-        # Map Reduce jobs. In order to get a pointer to the data to use as the input to the Map Reduce job, we need to
-        # isolate the hive tasks from the MySQL and Vertica tasks.
-        requirements = {
-            'hive': [],
-            'mysql': [],
-            'vertica': []
-        }
         for date in self.interval:
-            requirements['hive'].append(
-                EngagementPartitionTask(
-                    date=date,
-                    n_reduce_tasks=self.n_reduce_tasks,
-                    warehouse_path=self.warehouse_path,
-                    overwrite=self.overwrite,
-                )
+            yield EngagementPartitionTask(
+                date=date,
+                n_reduce_tasks=self.n_reduce_tasks,
+                warehouse_path=self.warehouse_path,
+                overwrite=self.overwrite,
             )
-            requirements['mysql'].append(
-                EngagementMysqlTask(
-                    date=date,
-                    n_reduce_tasks=self.n_reduce_tasks,
-                    warehouse_path=self.warehouse_path,
-                    overwrite=self.overwrite,
-                )
+            yield EngagementMysqlTask(
+                date=date,
+                n_reduce_tasks=self.n_reduce_tasks,
+                warehouse_path=self.warehouse_path,
+                overwrite=self.overwrite,
             )
             if self.vertica_enabled:
-                requirements['vertica'].append(
-                    EngagementVerticaTask(
-                        date=date,
-                        n_reduce_tasks=self.n_reduce_tasks,
-                        warehouse_path=self.warehouse_path,
-                        overwrite=self.overwrite,
-                        schema=self.vertica_schema,
-                        credentials=self.vertica_credentials,
-                    )
+                yield EngagementVerticaTask(
+                    date=date,
+                    n_reduce_tasks=self.n_reduce_tasks,
+                    warehouse_path=self.warehouse_path,
+                    overwrite=self.overwrite,
+                    schema=self.vertica_schema,
+                    credentials=self.vertica_credentials,
                 )
 
-        return requirements
-
     def output(self):
-        return [task.output() for task in self.requires().values()]
-
-
-class SparseWeeklyStudentCourseEngagementTableTask(BareHiveTableTask):
-
-    @property
-    def partition_by(self):
-        return 'dt'
-
-    @property
-    def table(self):
-        return 'sparse_course_engagement_weekly'
-
-    @property
-    def columns(self):
-        return SparseWeeklyCourseEngagementRecord.to_hive_schema()
-
-
-class SparseWeeklyStudentCourseEngagementPartitionTask(
-    EngagementDownstreamMixin, OptionalVerticaMixin, HivePartitionTask
-):
-
-    @property
-    def partition_value(self):
-        return self.date.isoformat()
-
-    @property
-    def hive_table_task(self):
-        return SparseWeeklyStudentCourseEngagementTableTask(
-            warehouse_path=self.warehouse_path
-        )
-
-    def requires(self):
-        yield SparseWeeklyStudentCourseEngagementTask(
-            date=self.date,
-            n_reduce_tasks=self.n_reduce_tasks,
-            output_root=self.partition_location,
-            overwrite=self.overwrite,
-            vertica_schema=self.vertica_schema,
-            vertica_credentials=self.vertica_credentials,
-        )
-        yield self.hive_table_task
-
-
-class SparseWeeklyStudentCourseEngagementTask(EngagementDownstreamMixin, OptionalVerticaMixin, MapReduceJobTask):
-    """
-    Store a sparse representation of student engagement with their courses on particular dates.
-
-    Only emits a record if the user did something in the course on that particular day, this dramatically reduces the
-    volume of data in this table and keeps it manageable.
-    """
-
-    output_root = luigi.Parameter()
-
-    def __init__(self, *args, **kwargs):
-        super(SparseWeeklyStudentCourseEngagementTask, self).__init__(*args, **kwargs)
-
-        start_date = self.date - datetime.timedelta(weeks=1)
-        self.interval = date_interval.Custom(start_date, self.date)
-
-    def requires_hadoop(self):
-        return self.requires().requires()['hive']
-
-    def mapper(self, line):
-        record = EngagementRecord.from_tsv(line)
-        yield ((record.course_id, record.username), line.strip())
-
-    def reducer(self, key, lines):
-        """Calculate counts for events corresponding to user and course in a given time period."""
-        course_id, username = key
-
-        output_record = SparseWeeklyCourseEngagementRecordBuilder()
-        for line in lines:
-            record = EngagementRecord.from_tsv(line)
-
-            output_record.days_active.add(record.date)
-
-            count = int(record.count)
-            if record.entity_type == 'problem':
-                if record.event == 'attempted':
-                    output_record.problem_attempts += count
-                    output_record.problems_attempted.add(record.entity_id)
-                elif record.event == 'completed':
-                    output_record.problems_completed.add(record.entity_id)
-            elif record.entity_type == 'video':
-                if record.event == 'played':
-                    output_record.videos_played.add(record.entity_id)
-            elif record.entity_type == 'forum':
-                output_record.discussion_activity += count
-            else:
-                log.warn('Unrecognized entity type: %s', record.entity_type)
-
-        yield SparseWeeklyCourseEngagementRecord(
-            course_id,
-            username,
-            self.date,
-            output_record.problem_attempts,
-            len(output_record.problems_attempted),
-            len(output_record.problems_completed),
-            len(output_record.videos_played),
-            output_record.discussion_activity,
-            len(output_record.days_active)
-        ).to_string_tuple()
-
-    def output(self):
-        return get_target_from_url(self.output_root)
-
-    def requires(self):
-        return EngagementIntervalTask(
-            interval=self.interval,
-            n_reduce_tasks=self.n_reduce_tasks,
-            warehouse_path=self.warehouse_path,
-            overwrite=self.overwrite,
-            vertica_schema=self.vertica_schema,
-            vertica_credentials=self.vertica_credentials,
-        )
-
-
-class SparseWeeklyCourseEngagementRecordBuilder(object):
-    """Gather the data needed to emit a sparse weekly course engagmenet record"""
-
-    def __init__(self):
-        self.problem_attempts = 0
-        self.problems_attempted = set()
-        self.problems_completed = set()
-        self.videos_played = set()
-        self.discussion_activity = 0
-        self.days_active = set()
-
-
-class SparseWeeklyCourseEngagementRecord(Record):
-    """
-    Summarizes a user's engagement with a particular course on a particular day with simple counts of activity.
-    """
-
-    course_id = StringField()
-    username = StringField()
-    date = DateField()
-    problem_attempts = IntegerField()
-    problems_attempted = IntegerField()
-    problems_completed = IntegerField()
-    videos_played = IntegerField()
-    discussion_activity = IntegerField()
-    days_active = IntegerField()
+        return [task.output() for task in self.requires()]
