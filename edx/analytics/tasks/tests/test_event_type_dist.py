@@ -14,7 +14,7 @@ class EventTypeDistributionTaskMapTest(MapperTestMixin, InitializeOpaqueKeysMixi
         self.task_class = EventTypeDistributionTask
         super(EventTypeDistributionTaskMapTest, self).setUp()
 
-        self.event_date = '2013-01-01'
+        self.event_date = '2013-12-17'
         self.event_type = "test_event"
         self.event_source = "browser"
         self.event_templates = {
@@ -70,9 +70,8 @@ class EventTypeDistributionTaskMapTest(MapperTestMixin, InitializeOpaqueKeysMixi
         self.assert_no_map_output_for(line)
 
     def test_valid_event_type(self):
-        line = self.create_event_log_line
-        expected_value = (self.event_date, self.event_type, self.event_source)
-        print(expected_value)
+        line = self.create_event_log_line()
+        expected_value = 1
         self.assert_single_map_output(line, self.expected_key, expected_value)
 
 

@@ -76,7 +76,7 @@ class MapperTestMixin(object):
         """Assert that an input line generates exactly one output record with the expected key and value"""
         mapper_output = tuple(self.task.mapper(line))
         print("---")
-        print(line)
+        print(mapper_output)
         self.assertEquals(len(mapper_output), 1)
         row = mapper_output[0]
         self.assertEquals(len(row), 2)
