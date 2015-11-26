@@ -3,8 +3,8 @@
 import logging
 import luigi
 import luigi.task
-from edx.analytics.tasks.mapreduce import MapReduceJobTaskMixin, MapReduceJobTask
-from edx.analytics.tasks.pathutil import EventLogSelectionDownstreamMixin, EventLogSelectionMixin
+from edx.analytics.tasks.mapreduce import MapReduceJobTask
+from edx.analytics.tasks.pathutil import EventLogSelectionMixin
 from edx.analytics.tasks.url import get_target_from_url, url_path_join
 from edx.analytics.tasks.vertica_load import VerticaCopyTask
 
@@ -15,6 +15,15 @@ class EventTypeDistributionTask(EventLogSelectionMixin, MapReduceJobTask):
     output_root = luigi.Parameter()
 
     def mapper(self, line):
+        """
+
+        Args:
+            line: Input json for events
+
+        Returns:
+            Output written in the output directory
+
+        """
         value = self.get_event_and_date_string(line)
         if value is None:
             return

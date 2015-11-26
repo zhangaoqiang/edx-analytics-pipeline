@@ -1,4 +1,4 @@
-import json
+
 import luigi
 from ddt import ddt, data, unpack
 from edx.analytics.tasks.event_type_dist import EventTypeDistributionTask
