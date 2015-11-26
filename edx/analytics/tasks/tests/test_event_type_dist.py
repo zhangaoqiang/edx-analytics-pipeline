@@ -104,7 +104,7 @@ class EventTypeDistributionTaskReducerTest(ReducerTestMixin, unittest.TestCase):
         (('2013-01-01', "test_event", "server"), [1, 1, 1]),
         (('2013-01-02', "test_event", "browser"), [1, 1, 1, 1, 1]),
         (('2013-01-03', "test_event", "server"), [1, 1]),
-        (('2013-01-04', "test_event", "mobile"), [1, 1, 1, 1]),
+        (('2013-01-04', "test_event", "mobile"), [1, 1, 1, 1]), 
     )
     @unpack
     def test_multiple_events(self, reduce_key, values):
