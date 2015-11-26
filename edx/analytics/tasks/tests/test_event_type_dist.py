@@ -105,7 +105,7 @@ class EventTypeDistributionTaskReducerTest(ReducerTestMixin, unittest.TestCase):
     @unpack
     def test_multiple_events_on_same_day_same_source(self, reduce_key, values):
         self.reduce_key = reduce_key
-        expected = ((reduce_key, 4),)
+        expected = ((reduce_key, sum(values)),)
         self._check_output_complete_tuple(values, expected)
 
     @data(
@@ -115,7 +115,7 @@ class EventTypeDistributionTaskReducerTest(ReducerTestMixin, unittest.TestCase):
     @unpack
     def test_multiple_events_on_same_day_different_sources(self, reduce_key, values):
         self.reduce_key = reduce_key
-        expected = ((reduce_key, 4),)
+        expected = ((reduce_key, sum(values)),)
         self._check_output_complete_tuple(values, expected)
 
     @data(
@@ -125,7 +125,7 @@ class EventTypeDistributionTaskReducerTest(ReducerTestMixin, unittest.TestCase):
     @unpack
     def test_multiple_events_on_different_days_same_sources(self, reduce_key, values):
         self.reduce_key = reduce_key
-        expected = ((reduce_key, 4),)
+        expected = ((reduce_key, sum(values)),)
         self._check_output_complete_tuple(values, expected)
 
     @data(
@@ -137,7 +137,7 @@ class EventTypeDistributionTaskReducerTest(ReducerTestMixin, unittest.TestCase):
     @unpack
     def test_multiple_events_on_different_days_different_sources(self, reduce_key, values):
         self.reduce_key = reduce_key
-        expected = ((reduce_key, 4),)
+        expected = ((reduce_key, sum(values)),)
         self._check_output_complete_tuple(values, expected)
 
     def create_task(self, interval='2013-01-01'):
