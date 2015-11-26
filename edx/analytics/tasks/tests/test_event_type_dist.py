@@ -100,42 +100,14 @@ class EventTypeDistributionTaskReducerTest(ReducerTestMixin, unittest.TestCase):
         self._check_output_complete_tuple(values, expected)
 
     @data(
-        (('2013-01-01', "test_event", "browser"), [1, 1, 1, 1])
-    )
-    @unpack
-    def test_multiple_events_on_same_day_same_source(self, reduce_key, values):
-        self.reduce_key = reduce_key
-        expected = ((reduce_key, sum(values)),)
-        self._check_output_complete_tuple(values, expected)
-
-    @data(
         (('2013-01-01', "test_event", "browser"), [1, 1, 1, 1]),
-        (('2013-01-01', "test_event", "server"), [1, 1, 1, 1])
+        (('2013-01-01', "test_event", "server"), [1, 1, 1]),
+        (('2013-01-02', "test_event", "browser"), [1, 1, 1, 1, 1]),
+        (('2013-01-03', "test_event", "server"), [1, 1]),
+        (('2013-01-04', "test_event", "mobile"), [1, 1, 1, 1]),
     )
     @unpack
-    def test_multiple_events_on_same_day_different_sources(self, reduce_key, values):
-        self.reduce_key = reduce_key
-        expected = ((reduce_key, sum(values)),)
-        self._check_output_complete_tuple(values, expected)
-
-    @data(
-        (('2013-01-01', "test_event", "browser"), [1, 1, 1, 1]),
-        (('2013-01-02', "test_event", "browser"), [1, 1, 1, 1])
-    )
-    @unpack
-    def test_multiple_events_on_different_days_same_sources(self, reduce_key, values):
-        self.reduce_key = reduce_key
-        expected = ((reduce_key, sum(values)),)
-        self._check_output_complete_tuple(values, expected)
-
-    @data(
-        (('2013-01-01', "test_event", "browser"), [1, 1, 1, 1]),
-        (('2013-01-02', "test_event", "browser"), [1, 1, 1, 1]),
-        (('2013-01-03', "test_event", "server"), [1, 1, 1, 1]),
-        (('2013-01-03', "test_event", "browser"), [1, 1, 1, 1])
-    )
-    @unpack
-    def test_multiple_events_on_different_days_different_sources(self, reduce_key, values):
+    def test_multiple_events(self, reduce_key, values):
         self.reduce_key = reduce_key
         expected = ((reduce_key, sum(values)),)
         self._check_output_complete_tuple(values, expected)
