@@ -1,3 +1,4 @@
+""" test event type distribution task """
 
 import luigi
 from ddt import ddt, data, unpack

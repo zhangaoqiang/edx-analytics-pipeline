@@ -16,14 +16,6 @@ class EventTypeDistributionTask(EventLogSelectionMixin, MapReduceJobTask):
     output_root = luigi.Parameter()
 
     def mapper(self, line):
-        """
-
-        Args:
-            line: text line from a tracking log event
-
-        Yields:
-            (reduce_key, list of values to compute sum of)
-        """
         value = self.get_event_and_date_string(line)
         if value is None:
             return
@@ -31,7 +23,7 @@ class EventTypeDistributionTask(EventLogSelectionMixin, MapReduceJobTask):
         event_type = event.get('event_type')
         event_date = date_string
         event_source = event.get('event_source')
-        if event_source == None or event_type == None or event_date == None:
+        if event_source is None or event_type is None or event_date is None:
             # Ignore if any of the keys is None
             return
         if event_type.startswith('/'):
@@ -40,16 +32,6 @@ class EventTypeDistributionTask(EventLogSelectionMixin, MapReduceJobTask):
         yield (event_date, event_type, event_source), 1
 
     def reducer(self, key, values):
-        """
-
-        Args:
-            key: reducer keys
-            values: list of values to sum
-
-        Yields:
-            event_date, event_type, event_source, count
-
-        """
         event_date_type_source = key
         event_count = sum(values)
         yield (event_date_type_source), event_count
@@ -67,21 +49,10 @@ class PushToVerticaEventTypeDistributionTask(VerticaCopyTask):
 
     @property
     def table(self):
-        """
-
-        Returns:
-            Name of the table to create or push data into
-        """
         return "event_type_distribution"
 
     @property
     def columns(self):
-        """
-
-        Returns:
-            Schema of the data
-
-        """
         return [
             ('event_date', 'DATETIME'),
             ('event_type', 'VARCHAR(255)'),
@@ -91,12 +62,6 @@ class PushToVerticaEventTypeDistributionTask(VerticaCopyTask):
 
     @property
     def insert_source_task(self):
-        """
-
-        Returns:
-            Source task in this case returns event type distribution task as the source
-
-        """
         return EventTypeDistributionTask(
             output_root=self.output_root,
             interval=self.interval,
