@@ -15,6 +15,20 @@ class EventTypeDistributionTask(EventLogSelectionMixin, MapReduceJobTask):
     """task to compute event_type and event_source values being encountered on each day in a given time interval"""
     output_root = luigi.Parameter()
 
+    events_list_file_path = "hdfs://localhost:9000/data/event_list.tsv"
+    known_events = {}
+
+    def __init__(self, *args, **kwargs):
+        with open(self.events_list_file_path) as f_in:
+            lines = filter(None, (line.rstrip() for line in f_in))
+
+        for line in lines:
+            if(not line.startswith('#')):
+                parts = line.split(" ")
+                self.known_events[(parts[1],parts[2])] = parts[0]
+
+        super(EventTypeDistributionTask, self).__init__(*args, **kwargs)
+
     def mapper(self, line):
         value = self.get_event_and_date_string(line)
         if value is None:
@@ -29,7 +43,12 @@ class EventTypeDistributionTask(EventLogSelectionMixin, MapReduceJobTask):
         if event_type.startswith('/'):
             # Ignore events that begin with a slash
             return
-        yield (event_date, event_type, event_source), 1
+        if (event_source,event_type) in self.known_events:
+            event_category = self.known_events[(event_source,event_type)]
+        else:
+            event_category = 'unknown'
+
+        yield (event_date, event_category, event_type, event_source), 1
 
     def reducer(self, key, values):
         event_date_type_source = key
@@ -55,6 +74,7 @@ class PushToVerticaEventTypeDistributionTask(VerticaCopyTask):
     def columns(self):
         return [
             ('event_date', 'DATETIME'),
+            ('event_category', 'VARCHAR(255)'),
             ('event_type', 'VARCHAR(255)'),
             ('event_source', 'VARCHAR(255)'),
             ('event_count', 'INT'),
