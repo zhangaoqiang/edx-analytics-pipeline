@@ -336,10 +336,13 @@ class OptionalVerticaMixin(object):
 
 
 class EngagementIntervalTask(
-    MapReduceJobTaskMixin, EventLogSelectionDownstreamMixin, OverwriteOutputMixin, WarehouseMixin,
-    OptionalVerticaMixin, luigi.WrapperTask
+    MapReduceJobTaskMixin, EventLogSelectionDownstreamMixin, WarehouseMixin, OptionalVerticaMixin, luigi.WrapperTask
 ):
     """Compute engagement information over a range of dates and insert the results into Hive, Vertica and MySQL"""
+
+    hive_overwrite = luigi.BooleanParameter(default=False)
+    mysql_overwrite = luigi.BooleanParameter(default=False)
+    vertica_overwrite = luigi.BooleanParameter(default=False)
 
     def requires(self):
         for date in self.interval:
@@ -347,20 +350,20 @@ class EngagementIntervalTask(
                 date=date,
                 n_reduce_tasks=self.n_reduce_tasks,
                 warehouse_path=self.warehouse_path,
-                overwrite=self.overwrite,
+                overwrite=self.hive_overwrite,
             )
             yield EngagementMysqlTask(
                 date=date,
                 n_reduce_tasks=self.n_reduce_tasks,
                 warehouse_path=self.warehouse_path,
-                overwrite=self.overwrite,
+                overwrite=self.mysql_overwrite,
             )
             if self.vertica_enabled:
                 yield EngagementVerticaTask(
                     date=date,
                     n_reduce_tasks=self.n_reduce_tasks,
                     warehouse_path=self.warehouse_path,
-                    overwrite=self.overwrite,
+                    overwrite=self.vertica_overwrite,
                     schema=self.vertica_schema,
                     credentials=self.vertica_credentials,
                 )
