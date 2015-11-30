@@ -31,8 +31,8 @@ class EventTypeDistributionTask(EventLogSelectionMixin, MapReduceJobTask):
             if(not line.startswith('#')):
                 parts = line.split(" ")
                 self.known_events[(parts[1],parts[2])] = parts[0]
-        log.log("==================== Umer Debugging Logs =================")
-        log.log(self.known_events)
+        log.debug("==================== Umer Debugging Logs =================")
+        log.debug(self.known_events)
 
     def mapper(self, line):
         value = self.get_event_and_date_string(line)
