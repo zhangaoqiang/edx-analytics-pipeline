@@ -5,7 +5,7 @@ import luigi
 import luigi.task
 from edx.analytics.tasks.mapreduce import MapReduceJobTask
 from edx.analytics.tasks.pathutil import EventLogSelectionMixin
-from edx.analytics.tasks.url import get_target_from_url, url_path_join
+from edx.analytics.tasks.url import ExternalURL, get_target_from_url, url_path_join
 from edx.analytics.tasks.vertica_load import VerticaCopyTask
 
 log = logging.getLogger(__name__)
@@ -18,7 +18,11 @@ class EventTypeDistributionTask(EventLogSelectionMixin, MapReduceJobTask):
     events_list_file_path = "hdfs://localhost:9000/data/event_list.tsv"
     known_events = {}
 
-    def __init__(self, *args, **kwargs):
+    def requires_local(self):
+        return ExternalURL(url=self.events_list_file_path)
+
+    def init_local(self):
+        super(EventTypeDistributionTask, self).init_local()
         with open(self.events_list_file_path) as f_in:
             lines = filter(None, (line.rstrip() for line in f_in))
 
@@ -26,8 +30,6 @@ class EventTypeDistributionTask(EventLogSelectionMixin, MapReduceJobTask):
             if(not line.startswith('#')):
                 parts = line.split(" ")
                 self.known_events[(parts[1],parts[2])] = parts[0]
-
-        super(EventTypeDistributionTask, self).__init__(*args, **kwargs)
 
     def mapper(self, line):
         value = self.get_event_and_date_string(line)
