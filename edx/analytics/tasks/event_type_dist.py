@@ -23,7 +23,8 @@ class EventTypeDistributionTask(EventLogSelectionMixin, MapReduceJobTask):
 
     def init_local(self):
         super(EventTypeDistributionTask, self).init_local()
-        with open(self.requires_local()) as f_in:
+        #self.input_local().open() as f_in
+        with self.input_local().open() as f_in:
             lines = filter(None, (line.rstrip() for line in f_in))
 
         for line in lines:
