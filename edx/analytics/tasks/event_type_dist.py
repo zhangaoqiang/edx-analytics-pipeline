@@ -14,7 +14,7 @@ log = logging.getLogger(__name__)
 class EventTypeDistributionTask(EventLogSelectionMixin, MapReduceJobTask):
     """Task to compute event_type and event_source values being encountered on each day in a given time interval."""
     output_root = luigi.Parameter()
-    events_list_file_path = luigi.parameter()
+    events_list_file_path = luigi.Parameter()
 
     def requires_local(self):
         return ExternalURL(url=self.events_list_file_path)
