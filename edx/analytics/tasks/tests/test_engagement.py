@@ -83,7 +83,7 @@ class EngagementTaskMapTest(InitializeOpaqueKeysMixin, MapperTestMixin, unittest
         self.default_event_template = 'problem_check'
         self.create_task()
 
-    def create_task(self, date=None):
+    def create_task(self, date=None):  # pylint: disable=arguments-differ
         """Allow arguments to be passed to the task constructor."""
         if not date:
             date = self.DEFAULT_DATE
@@ -115,6 +115,7 @@ class EngagementTaskMapTest(InitializeOpaqueKeysMixin, MapperTestMixin, unittest
         )
 
     def get_expected_output_key(self, entity_type, entity_id, action):
+        """Generate the expected key"""
         return self.course_id, 'test_user', self.DEFAULT_DATE, entity_type, entity_id, action, '0'
 
     def test_correct_problem_check(self):
@@ -123,11 +124,10 @@ class EngagementTaskMapTest(InitializeOpaqueKeysMixin, MapperTestMixin, unittest
 
         self.assert_map_output(
             json.dumps(template),
-            (
-                self.get_expected_output_key('problem', self.problem_id, 'completed'),
-                self.get_expected_output_key('problem', self.problem_id, 'attempted')
-            ),
-            [1] * 2
+            [
+                (self.get_expected_output_key('problem', self.problem_id, 'completed'), 1),
+                (self.get_expected_output_key('problem', self.problem_id, 'attempted'), 1)
+            ]
         )
 
     def test_missing_problem_id(self):
@@ -199,6 +199,11 @@ class EngagementTaskMapTest(InitializeOpaqueKeysMixin, MapperTestMixin, unittest
         template['event']['vote_value'] = 'up'
         template['event']['undo_vote'] = True
         self.assert_no_map_output_for(self.create_event_log_line(template=template))
+
+
+class EngagementTaskMapLegacyKeysTest(InitializeLegacyKeysMixin, unittest.TestCase):
+    """Also test with legacy keys"""
+    pass
 
 
 @ddt

@@ -1,29 +1,27 @@
+# pylint: disable=line-too-long
 """
-End to end test of the financial reporting workflow.
+End to end test of the per-module engagement workflow.
 """
 
 import logging
-import os
-from cStringIO import StringIO
 import datetime
 
 
-from edx.analytics.tasks.tests import unittest
 from edx.analytics.tasks.tests.acceptance import AcceptanceTestCase
-from edx.analytics.tasks.url import url_path_join
 
 log = logging.getLogger(__name__)
 
 
 class EngagementAcceptanceTest(AcceptanceTestCase):
+    """Ensure engagement data is populated in the result store incrementally."""
 
     INPUT_FILE = 'engagement_acceptance_tracking_{date}.log'
     NUM_REDUCERS = 1
 
     def test_engagement(self):
         for day in (13, 16):
-            dt = datetime.date(2015, 4, day)
-            self.upload_tracking_log(self.INPUT_FILE.format(date=dt.strftime('%Y%m%d')), dt)
+            fake_date = datetime.date(2015, 4, day)
+            self.upload_tracking_log(self.INPUT_FILE.format(date=fake_date.strftime('%Y%m%d')), fake_date)
 
         # First run with the 13th
         self.task.launch([

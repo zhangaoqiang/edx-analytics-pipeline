@@ -1,4 +1,5 @@
-import datetime
+"""Measure student engagement with individual pieces of course content"""
+
 import logging
 
 log = logging.getLogger(__name__)
@@ -10,14 +11,13 @@ from luigi.configuration import get_config
 
 try:
     import mysql.connector
-    from mysql.connector.errors import ProgrammingError
     from mysql.connector import errorcode
-    mysql_client_available = True
+    mysql_client_available = True  # pylint: disable=invalid-name
 except ImportError:
     log.warn('Unable to import mysql client libraries')
     # On hadoop slave nodes we don't have mysql client libraries installed so it is pointless to ship this package to
     # them, instead just fail noisily if we attempt to use these libraries.
-    mysql_client_available = False
+    mysql_client_available = False  # pylint: disable=invalid-name
 
 from edx.analytics.tasks.mapreduce import MapReduceJobTask, MapReduceJobTaskMixin
 from edx.analytics.tasks.pathutil import EventLogSelectionMixin, EventLogSelectionDownstreamMixin
@@ -57,7 +57,6 @@ class EngagementDownstreamMixin(
     interval = None
 
 
-# TODO: unit tests
 class EngagementTask(EventLogSelectionMixin, OverwriteOutputMixin, MapReduceJobTask):
     """
     Process the event log and categorize user engagement with various types of content.
@@ -158,7 +157,7 @@ class EngagementTask(EventLogSelectionMixin, OverwriteOutputMixin, MapReduceJobT
             yield (record.to_string_tuple(), 1)
 
     def reducer(self, key, values):
-        # Replace the count (which is hardcoded to 0 above, with the actual number of records in this group.
+        """Replace the count (which is hardcoded to 0 above, with the actual number of records in this group."""
         yield ('\t'.join(key[:-1]), sum(values))
 
     def output(self):
@@ -170,6 +169,7 @@ class EngagementTask(EventLogSelectionMixin, OverwriteOutputMixin, MapReduceJobT
 
 
 class EngagementTableTask(BareHiveTableTask):
+    """The hive table for this engagement data."""
 
     @property
     def partition_by(self):
@@ -185,10 +185,12 @@ class EngagementTableTask(BareHiveTableTask):
 
 
 class EngagementPartitionTask(EngagementDownstreamMixin, HivePartitionTask):
+    """The hive table partition for this engagement data."""
 
     @property
     def partition_value(self):
-        return self.date.isoformat()
+        """Use a dynamic partition value based on the date parameter."""
+        return self.date.isoformat()  # pylint: disable=no-member
 
     @property
     def hive_table_task(self):
@@ -202,6 +204,7 @@ class EngagementPartitionTask(EngagementDownstreamMixin, HivePartitionTask):
 
     @property
     def data_task(self):
+        """The task that generates the raw data inside this hive partition."""
         return EngagementTask(
             date=self.date,
             n_reduce_tasks=self.n_reduce_tasks,
@@ -244,7 +247,10 @@ class EngagementMysqlTask(EngagementDownstreamMixin, MysqlInsertTask):
 
             # Use "DELETE" instead of TRUNCATE since TRUNCATE forces an implicit commit before it executes which would
             # commit the currently open transaction before continuing with the copy.
-            query = "DELETE FROM {table} WHERE date='{date}'".format(table=self.table, date=self.date.isoformat())
+            query = "DELETE FROM {table} WHERE date='{date}'".format(
+                table=self.table,
+                date=self.date.isoformat()  # pylint: disable=no-member
+            )
             connection.cursor().execute(query)
 
     @property
@@ -291,6 +297,11 @@ class EngagementMysqlTask(EngagementDownstreamMixin, MysqlInsertTask):
 
 
 class EngagementVerticaTask(EngagementDownstreamMixin, VerticaCopyTask):
+    """
+    Replicate the hive table in Vertica.
+
+    Note that it is updated incrementally.
+    """
 
     @property
     def insert_source_task(self):

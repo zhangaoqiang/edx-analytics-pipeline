@@ -99,6 +99,7 @@ class MysqlInsertTask(MysqlInsertTaskMixin, luigi.Task):
 
     @property
     def keys(self):
+        """List of tuples defining other keys to include in the table definition."""
         return []
 
     def create_table(self, connection):

@@ -5,10 +5,10 @@ import textwrap
 
 import luigi
 from luigi.configuration import get_config
-from luigi.hive import HiveQueryTask, HivePartitionTarget, HiveQueryRunner, HiveTableTarget, default_client, HiveCommandError
+from luigi.hive import HiveQueryTask, HivePartitionTarget, HiveQueryRunner, HiveTableTarget
 from luigi.parameter import Parameter
 
-from edx.analytics.tasks.url import url_path_join, get_target_from_url, get_target_class_from_url
+from edx.analytics.tasks.url import url_path_join, get_target_from_url
 from edx.analytics.tasks.mysql_load import MysqlInsertTask
 from edx.analytics.tasks.util.overwrite import OverwriteOutputMixin
 
@@ -125,6 +125,15 @@ class HiveTableTask(WarehouseMixin, OverwriteOutputMixin, HiveQueryTask):
 
 
 class BareHiveTableTask(WarehouseMixin, OverwriteOutputMixin, HiveQueryTask):
+    """
+    Abstract class that represents the metadata associated with a Hive table.
+
+    Note that all this task does is ensure that the table is created, it does not populate it with any data, simply runs
+    the DDL commands to create the table.
+
+    Also note that it will not change the schema of the table if it already exists unless the overwrite parameter is
+    set to True.
+    """
 
     def query(self):
         partition_clause = ''
@@ -164,7 +173,7 @@ class BareHiveTableTask(WarehouseMixin, OverwriteOutputMixin, HiveQueryTask):
     @property
     def partition_by(self):
         """The partitioning key name. Specify None to create a table that is not partitioned."""
-        raise None
+        raise NotImplementedError
 
     @property
     def table(self):
@@ -205,8 +214,16 @@ class BareHiveTableTask(WarehouseMixin, OverwriteOutputMixin, HiveQueryTask):
         if self.overwrite:
             self.attempted_removal = True
 
+        # Note that the query takes care of actually removing the old partition.
+
 
 class HivePartitionTask(WarehouseMixin, OverwriteOutputMixin, HiveQueryTask):
+    """
+    Abstract class that represents the metadata associated with a partition in a Hive table.
+
+    Note that all this task does is ensure that the partition is created, it does not populate it with any data, simply
+    runs the DDL commands to create the partition.
+    """
 
     partition_value = luigi.Parameter()
 
@@ -219,23 +236,34 @@ class HivePartitionTask(WarehouseMixin, OverwriteOutputMixin, HiveQueryTask):
         else:
             drop_on_overwrite = ''
 
-        return "USE {database_name}; {drop_on_overwrite} ALTER TABLE {table} ADD IF NOT EXISTS PARTITION ({partition.query_spec});".format(
+        query_format = """
+            USE {database_name};
+            {drop_on_overwrite}
+            ALTER TABLE {table} ADD IF NOT EXISTS PARTITION ({partition.query_spec});
+        """
+
+        query = query_format.format(
             database_name=hive_database_name(),
             table=self.hive_table_task.table,
             partition=self.partition,
             drop_on_overwrite=drop_on_overwrite
         )
 
+        return textwrap.dedent(query)
+
     @property
     def hive_table_task(self):
+        """Returns a reference to the task that represents the table that this partition is part of."""
         raise NotImplementedError
 
     @property
     def partition(self):
+        """Returns a HivePartition object that represents the partition."""
         return HivePartition(self.hive_table_task.partition_by, self.partition_value)
 
     @property
     def partition_location(self):
+        """Returns the full URL of the partition. This allows data to be written to the partition by external systems"""
         return url_path_join(self.hive_table_task.table_location, self.partition.path_spec + '/')
 
     def requires(self):
@@ -252,6 +280,8 @@ class HivePartitionTask(WarehouseMixin, OverwriteOutputMixin, HiveQueryTask):
     def remove_output_on_overwrite(self):
         if self.overwrite:
             self.attempted_removal = True
+
+        # Note that the query takes care of actually removing the old partition.
 
 
 class OverwriteAwareHiveQueryRunner(HiveQueryRunner):

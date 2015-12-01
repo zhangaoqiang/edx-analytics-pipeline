@@ -1,10 +1,11 @@
+"""Tools for working with typed records."""
 
 from collections import OrderedDict
 import datetime
 import itertools
 
 
-DEFAULT_NULL_VALUE = '\\N'
+DEFAULT_NULL_VALUE = '\\N'  # This is the default string used by Hive to represent a NULL value.
 
 
 class Record(object):
@@ -17,7 +18,7 @@ class Record(object):
 
     Once the record is deserialized by the python code it can be used much like a namedtuple or other similar simple
     structure. It is intended to be immutable after initialization, however that can be bypassed relatively simply if
-    someone wants to be rebellious.
+    someone wants to.
 
     We could have used a more complex ORM, but decided that they weren't worth the complexity, particularly given the
     fact that we would have to implement a bunch of customization and mapping logic.
@@ -87,6 +88,8 @@ class Record(object):
         if len(kwargs) > 0:
             raise TypeError('Unknown fields specified: {0}'.format(', '.join(kwargs.keys())))
 
+        self._initialized = True
+
     def initialize_field(self, field_name, value):
         """
         Make sure the value is compatible with the field and assign that value to the field.
@@ -106,6 +109,18 @@ class Record(object):
             ))
         else:
             setattr(self, field_name, value)
+
+    def __setattr__(self, key, value):
+        if hasattr(self, '_initialized'):
+            raise TypeError('Records are intended to be immutable')
+        else:
+            super(Record, self).__setattr__(key, value)
+
+    def __delattr__(self, item):
+        if hasattr(self, '_initialized'):
+            raise TypeError('Records are intended to be immutable')
+        else:
+            super(Record, self).__delattr__(item)
 
     @classmethod
     def get_fields(cls):
@@ -181,6 +196,12 @@ class Record(object):
 
     @classmethod
     def from_tsv(cls, tsv_str):
+        """
+        Construct a record from a tab-separated string.
+
+        Arguments:
+            tsv_str (string): The TSV formatted string that represents the record.
+        """
         return cls.from_string_tuple(tuple(tsv_str.rstrip('\r\n').split('\t')))
 
     @classmethod
@@ -214,6 +235,11 @@ class Record(object):
 class Field(object):
     """
     Represents a field within a record.
+
+    The field is an abstract representation of a type. It can be used to generate schemas for various data manipulation
+    systems as well as interpret data. It is intended to provide structure so that downstream code does not have to
+    handle edge cases related to dynamic typing. It enforces the type and ensures that the data conforms to the
+    declared schema.
     """
     counter = 0
 
@@ -222,7 +248,7 @@ class Field(object):
 
         # This is a hack that lets us "see" the order the class member variables appear in the class they are declared
         # in. Sorting by this counter will allow us to order them appropriately. Note that this isn't atomic and has
-        # all kinds of issues, but is funcitional and doesn't require parsing the AST or anything *more* hacky.
+        # all kinds of issues, but is functional and doesn't require parsing the AST or anything *more* hacky.
         self.counter = Field.counter
         Field.counter += 1
 
@@ -232,7 +258,8 @@ class Field(object):
 
         The goal of this method is to do some trivial checks to detect problems with the data as early as possible and
         raise an error. This will prevent us from attempting to insert data into the database that will definitely cause
-        errors on insertion.
+        errors on insertion. It also allows downstream code to make assumptions about the data (e.g. that it isn't
+        None) since the Field will enforce those constraints.
 
         Arguments:
             value (object):
@@ -245,13 +272,16 @@ class Field(object):
         return validation_errors
 
     def serialize_to_string(self, value):
+        """Returns a string representation of a value for this field."""
         return unicode(value)
 
     def deserialize_from_string(self, string_value):
+        """Returns a typed representation of the value from it's string representation."""
         return string_value
 
     @property
     def sql_type(self):
+        """Returns a SQL-92 compliant declaration that can be used to generate a table that includes this field."""
         base_type = self.sql_base_type
         if not self.nullable:
             base_type += ' NOT NULL'
@@ -259,14 +289,17 @@ class Field(object):
 
     @property
     def sql_base_type(self):
+        """Returns the core SQL-92 data type without any modifiers (such as NOT NULL)."""
         raise NotImplementedError
 
     @property
     def hive_type(self):
+        """Returns the HiveQL data type for this type of field."""
         raise NotImplementedError
 
 
-class StringField(Field):
+class StringField(Field):  # pylint: disable=abstract-method
+    """Represents a field that contains a relatively short string."""
 
     hive_type = 'STRING'
 
@@ -293,7 +326,8 @@ class StringField(Field):
             return 'VARCHAR'
 
 
-class IntegerField(Field):
+class IntegerField(Field):  # pylint: disable=abstract-method
+    """Represents a field that contains an integer."""
 
     hive_type = sql_base_type = 'INT'
 
@@ -307,7 +341,8 @@ class IntegerField(Field):
         return int(string_value)
 
 
-class DateField(Field):
+class DateField(Field):  # pylint: disable=abstract-method
+    """Represents a field that contains a date."""
 
     hive_type = 'STRING'
     sql_base_type = 'DATE'

@@ -74,18 +74,18 @@ class MapperTestMixin(object):
 
     def assert_single_map_output(self, line, expected_key, expected_value):
         """Assert that an input line generates exactly one output record with the expected key and value"""
-        self.assert_map_output(line, [expected_key], [expected_value])
+        self.assert_map_output(line, [(expected_key, expected_value)])
 
-    def assert_map_output(self, line, expected_keys, expected_values):
+    def assert_map_output(self, line, expected_key_value_pairs):
+        """Assert that an input line generates the expected key value pairs"""
         mapper_output = tuple(self.task.mapper(line))
         mapper_output_list = list(mapper_output)
-        self.assertEqual(len(mapper_output_list), len(expected_keys))
-        self.assertEqual(len(mapper_output_list), len(expected_values))
+        self.assertEqual(len(mapper_output_list), len(expected_key_value_pairs))
         for i, row in enumerate(mapper_output):
             self.assertEquals(len(row), 2)
             actual_key, actual_value = row
-            self.assertEquals(expected_keys[i], actual_key)
-            self.assertEquals(expected_values[i], actual_value)
+            self.assertEquals(expected_key_value_pairs[i][0], actual_key)
+            self.assertEquals(expected_key_value_pairs[i][1], actual_value)
 
     def assert_single_map_output_load_jsons(self, line, expected_key, expected_value):
         """
