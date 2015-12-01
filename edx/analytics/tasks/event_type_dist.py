@@ -12,7 +12,7 @@ log = logging.getLogger(__name__)
 
 
 class EventTypeDistributionTask(EventLogSelectionMixin, MapReduceJobTask):
-    """task to compute event_type and event_source values being encountered on each day in a given time interval"""
+    """Task to compute event_type and event_source values being encountered on each day in a given time interval."""
     output_root = luigi.Parameter()
 
     events_list_file_path = "hdfs://localhost:9000/data/event_list.tsv"
@@ -23,7 +23,6 @@ class EventTypeDistributionTask(EventLogSelectionMixin, MapReduceJobTask):
 
     def init_local(self):
         super(EventTypeDistributionTask, self).init_local()
-        #self.input_local().open() as f_in
         with self.input_local().open() as f_in:
             lines = filter(None, (line.rstrip() for line in f_in))
 
@@ -50,7 +49,7 @@ class EventTypeDistributionTask(EventLogSelectionMixin, MapReduceJobTask):
             return
         log.debug("======= reduce key ==========")
         log.debug((event_source,event_type))
-        if (event_source,event_type) in self.known_events.iterkeys():
+        if (event_source,event_type) in self.known_events.viewkeys():
             event_category = self.known_events[(event_source,event_type)]
         else:
             event_category = 'unknown'
@@ -58,20 +57,18 @@ class EventTypeDistributionTask(EventLogSelectionMixin, MapReduceJobTask):
         yield (event_date, event_category, event_type, event_source), 1
 
     def reducer(self, key, values):
-        event_date_type_source = key
+        event_date_type_source_category = key
         event_count = sum(values)
-        yield (event_date_type_source), event_count
+        yield (event_date_type_source_category), event_count
 
     def output(self):
         return get_target_from_url(url_path_join(self.output_root, 'event_type_distribution/'))
 
-
 class PushToVerticaEventTypeDistributionTask(VerticaCopyTask):
-    """push the event type distribution task data to vertica"""
+    """Push the event type distribution task data to Vertica."""
     output_root = luigi.Parameter()
     interval = luigi.DateIntervalParameter()
     n_reduce_tasks = luigi.Parameter()
-
 
     @property
     def table(self):
