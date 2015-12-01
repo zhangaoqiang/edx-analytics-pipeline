@@ -14,25 +14,21 @@ log = logging.getLogger(__name__)
 class EventTypeDistributionTask(EventLogSelectionMixin, MapReduceJobTask):
     """Task to compute event_type and event_source values being encountered on each day in a given time interval."""
     output_root = luigi.Parameter()
-
-    events_list_file_path = "hdfs://localhost:9000/data/event_list.tsv"
-
+    events_list_file_path = luigi.parameter()
 
     def requires_local(self):
         return ExternalURL(url=self.events_list_file_path)
 
     def init_local(self):
-        self.known_events = {}
         super(EventTypeDistributionTask, self).init_local()
+        self.known_events = {}
         with self.input_local().open() as f_in:
             lines = filter(None, (line.rstrip() for line in f_in))
 
         for line in lines:
             if(not line.startswith('#')):
-                parts = line.split(" ")
+                parts = line.split("\t")
                 self.known_events[(parts[1],parts[2])] = parts[0]
-        log.debug("==================== Umer Debugging Logs =================")
-        log.debug(self.known_events)
 
     def mapper(self, line):
         value = self.get_event_and_date_string(line)
@@ -42,26 +38,25 @@ class EventTypeDistributionTask(EventLogSelectionMixin, MapReduceJobTask):
         event_type = event.get('event_type')
         event_date = date_string
         event_source = event.get('event_source')
+        exported = False
         if event_source is None or event_type is None or event_date is None:
             # Ignore if any of the keys is None
             return
         if event_type.startswith('/'):
             # Ignore events that begin with a slash
             return
-        log.error("======= reduce key ==========")
-        log.error((event_source,event_type))
-        log.error(self.known_events)
         if (event_source,event_type) in self.known_events.iterkeys():
             event_category = self.known_events[(event_source,event_type)]
+            exported = True
         else:
             event_category = 'unknown'
 
-        yield (event_date, event_category, event_type, event_source), 1
+        yield (event_date, event_category, event_type, event_source, exported), 1
 
     def reducer(self, key, values):
-        event_date_type_source_category = key
+        event_date_type_source_category_exported = key
         event_count = sum(values)
-        yield (event_date_type_source_category), event_count
+        yield (event_date_type_source_category_exported), event_count
 
     def output(self):
         return get_target_from_url(url_path_join(self.output_root, 'event_type_distribution/'))
@@ -83,6 +78,7 @@ class PushToVerticaEventTypeDistributionTask(VerticaCopyTask):
             ('event_category', 'VARCHAR(255)'),
             ('event_type', 'VARCHAR(255)'),
             ('event_source', 'VARCHAR(255)'),
+            ('exported', 'BOOLEAN'),
             ('event_count', 'INT'),
         ]
 
