@@ -135,9 +135,6 @@ class EngagementTask(EventLogSelectionMixin, OverwriteOutputMixin, MapReduceJobT
                     events.append('responded')
                 elif event_type == 'edx.forum.thread.created':
                     events.append('created')
-            elif event_type.endswith('.voted'):
-                if event_data.get('vote_value') == 'up' and not event_data.get('undo_vote', False):
-                    events.append('up_voted')
 
             entity_id = event_data.get('commentable_id')
 

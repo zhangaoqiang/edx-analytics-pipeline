@@ -168,38 +168,6 @@ class EngagementTaskMapTest(InitializeOpaqueKeysMixin, MapperTestMixin, unittest
             1
         )
 
-    @data(
-        'edx.forum.response.voted',
-        'edx.forum.thread.voted',
-    )
-    def test_forum_voting_events(self, event_type):
-        template = self.event_templates['edx.forum.object.created']
-        template['event_type'] = event_type
-        template['name'] = event_type
-        template['event']['vote_value'] = 'up'
-        template['event']['undo_vote'] = False
-        self.assert_single_map_output(
-            json.dumps(template),
-            self.get_expected_output_key('forum', self.forum_id, 'up_voted'),
-            1
-        )
-
-    def test_forum_downvote_event(self):
-        template = self.event_templates['edx.forum.object.created']
-        template['event_type'] = 'edx.forum.thread.voted'
-        template['name'] = 'edx.forum.thread.voted'
-        template['event']['vote_value'] = 'down'
-        template['event']['undo_vote'] = False
-        self.assert_no_map_output_for(self.create_event_log_line(template=template))
-
-    def test_forum_undo_up_vote_event(self):
-        template = self.event_templates['edx.forum.object.created']
-        template['event_type'] = 'edx.forum.thread.voted'
-        template['name'] = 'edx.forum.thread.voted'
-        template['event']['vote_value'] = 'up'
-        template['event']['undo_vote'] = True
-        self.assert_no_map_output_for(self.create_event_log_line(template=template))
-
 
 class EngagementTaskMapLegacyKeysTest(InitializeLegacyKeysMixin, unittest.TestCase):
     """Also test with legacy keys"""
