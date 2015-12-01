@@ -16,12 +16,13 @@ class EventTypeDistributionTask(EventLogSelectionMixin, MapReduceJobTask):
     output_root = luigi.Parameter()
 
     events_list_file_path = "hdfs://localhost:9000/data/event_list.tsv"
-    known_events = {}
+
 
     def requires_local(self):
         return ExternalURL(url=self.events_list_file_path)
 
     def init_local(self):
+        self.known_events = {}
         super(EventTypeDistributionTask, self).init_local()
         with self.input_local().open() as f_in:
             lines = filter(None, (line.rstrip() for line in f_in))
