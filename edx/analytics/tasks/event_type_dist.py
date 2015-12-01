@@ -50,7 +50,7 @@ class EventTypeDistributionTask(EventLogSelectionMixin, MapReduceJobTask):
             return
         log.debug("======= reduce key ==========")
         log.debug((event_source,event_type))
-        if (event_source,event_type) in self.known_events.keys():
+        if (event_source,event_type) in self.known_events.iterkeys():
             event_category = self.known_events[(event_source,event_type)]
         else:
             event_category = 'unknown'
