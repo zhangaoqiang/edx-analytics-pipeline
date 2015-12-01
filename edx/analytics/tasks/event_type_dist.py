@@ -48,7 +48,7 @@ class EventTypeDistributionTask(EventLogSelectionMixin, MapReduceJobTask):
         if event_type.startswith('/'):
             # Ignore events that begin with a slash
             return
-        if (event_source,event_type) in self.known_events:
+        if (event_source,event_type) in self.known_events.keys():
             event_category = self.known_events[(event_source,event_type)]
         else:
             event_category = 'unknown'
