@@ -10,7 +10,7 @@ from edx.analytics.tasks.pathutil import PathSetTask
 from edx.analytics.tasks.url import get_target_from_url, url_path_join
 from edx.analytics.tasks.util.id_codec import UserIdRemapperMixin
 import edx.analytics.tasks.util.opaque_key_util as opaque_key_util
-from edx.analytics.tasks.util.file_util import copy_file_to_open_file
+from edx.analytics.tasks.util.file_util import FileCopyTask
 
 import logging
 
@@ -64,20 +64,6 @@ class DeidentifySqlDumpTask(BaseDeidentifyDumpTask):
 
     def filter_row(self, row):
         raise NotImplementedError
-
-
-class FileCopyTask(object):
-
-    def run(self):
-        def report_progress(num_bytes):
-            """Update hadoop counters as the file is written"""
-            self.incr_counter('FilyCopyTask', 'Bytes Written to Output', num_bytes)
-
-        output_file = self.output().open('w')
-        try:
-            copy_file_to_open_file(self.input()[0].path, output_file, progress=report_progress)
-        finally:
-            output_file.close()
 
 
 class DeidentifyAuthUserProfileTask(DeidentifySqlDumpTask):
