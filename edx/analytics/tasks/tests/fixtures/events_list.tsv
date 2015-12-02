@@ -1,5 +1,5 @@
-admin browser edx.instructor.report.downloaded
-admin server add-forum-admin
-admin server add-forum-community-TA
-admin server add-forum-mod
-admin server add-instructor
+admin	browser	edx.instructor.report.downloaded
+admin	server	add-forum-admin
+admin	server	add-forum-community-TA
+admin	server	add-forum-mod
+admin	server	add-instructor

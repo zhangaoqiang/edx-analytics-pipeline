@@ -27,13 +27,13 @@ class EventTypeDistributionTask(EventLogSelectionMixin, MapReduceJobTask):
             self.known_events = self.parse_events_list_file()
 
     def parse_events_list_file(self):
+        """ Read and parse the known events list file and populate it in a dictionary."""
         with self.input_local().open() as f_in:
             lines = filter(None, (line.rstrip() for line in f_in))
         parsed_events = {}
         for line in lines:
             if (not line.startswith('#')):
-                parts = line.split(" ")
-                print("=============")
+                parts = line.split("\t")
                 print(parts)
                 parsed_events[(parts[1], parts[2])] = parts[0]
         return parsed_events

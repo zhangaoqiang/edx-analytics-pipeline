@@ -19,6 +19,7 @@ class EventTypeDistributionTaskMapTest(MapperTestMixin, InitializeOpaqueKeysMixi
         self.event_type = "test_event"
         self.event_source = "browser"
         self.event_category = "unknown"
+        self.task_class.events_list_file_path = os.path.join(os.path.dirname(__file__), 'fixtures', 'events_list.tsv')
         self.exported = False
         self.event_templates = {
             'event': {
@@ -42,6 +43,7 @@ class EventTypeDistributionTaskMapTest(MapperTestMixin, InitializeOpaqueKeysMixi
         }
         self.default_event_template = 'event'
         self.expected_key = (self.event_date, self.event_category, self.event_type, self.event_source, self.exported)
+        self.task_class.known_events = {("browser", "test_event"): "hi", }
 
     def test_no_event(self):
         line = 'this is garbage'
@@ -72,11 +74,20 @@ class EventTypeDistributionTaskMapTest(MapperTestMixin, InitializeOpaqueKeysMixi
         expected_value = 1
         self.assert_single_map_output(line, self.expected_key, expected_value)
 
-    def test_event_list_parsing(self):
+    def test_event_list_file_parsing(self):
+        expected_dict = {
+            ("browser", "edx.instructor.report.downloaded"): "admin",
+            ("server", "add-forum-admin"): "admin",
+            ("server", "add-forum-community-TA"): "admin",
+            ("server", "add-forum-mod"): "admin",
+            ("server", "add-instructor"): "admin",
+        }
+        actual_parsing = self.task.parse_events_list_file()
+        self.assertEquals(expected_dict, actual_parsing)
+
+    def test_event_list_dictionary_mapping(self):
         """ Test if the file file parsing works correct."""
-        self.events_list_file_path = os.path.join(os.path.dirname(__file__), 'fixtures', 'events_list.tsv')
         line = self.create_event_log_line()
-        self.task_class.known_events = {("browser", "test_event"): "hi", }
         self.expected_key = (self.event_date, "unknown", self.event_type, self.event_source, False)
         self.assert_single_map_output(line, self.expected_key, 1)
 
