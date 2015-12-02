@@ -32,6 +32,7 @@ class EventTypeDistributionTask(EventLogSelectionMixin, MapReduceJobTask):
             if(not line.startswith('#')):
                 parts = line.split("\t")
                 parsed_events[(parts[1],parts[2])] = parts[0]
+        return parsed_events
 
 
     def mapper(self, line):
