@@ -1,7 +1,5 @@
 """ test event type distribution task """
-import textwrap
 
-import luigi
 import os
 from ddt import ddt, data, unpack
 from edx.analytics.tasks.event_type_dist import EventTypeDistributionTask
@@ -74,20 +72,13 @@ class EventTypeDistributionTaskMapTest(MapperTestMixin, InitializeOpaqueKeysMixi
         expected_value = 1
         self.assert_single_map_output(line, self.expected_key, expected_value)
 
-    def event_list_parsing(self):
+    def test_event_list_parsing(self):
         """ Test if the file file parsing works correct."""
         self.events_list_file_path = os.path.join(os.path.dirname(__file__), 'fixtures', 'events_list.tsv')
-        parsing_result = self.event_list_parsing()
-        expected_parsing = {("browser", "edx.instructor.report.downloaded"): "admin",
-                            ("server", "add-forum-admin"): "admin",
-                            ("server", "add-forum-community-TA"): "admin",
-                            ("server", "add-forum-mod"): "admin",
-                            ("server", "add-instructor"): "admin"}
-        self.assertEquals(parsing_result, expected_parsing)
-
-    def reformat(self, string):
-        """Reformat string to make it like a TSV."""
-        return textwrap.dedent(string).strip().replace(' ', '\t')
+        line = self.create_event_log_line()
+        self.task_class.known_events = {("browser", "test_event"): "hi", }
+        self.expected_key = (self.event_date, "unknown", self.event_type, self.event_source, False)
+        self.assert_single_map_output(line, self.expected_key, 1)
 
 
 @ddt
@@ -99,7 +90,7 @@ class EventTypeDistributionTaskReducerTest(ReducerTestMixin, unittest.TestCase):
         super(EventTypeDistributionTaskReducerTest, self).setUp()
 
         # Create the task locally, since we only need to check certain attributes
-        self.create_task()
+        self.interval = '2013-01-01'
         self.event_type = "test_event"
         self.event_date = "2013-01-01"
         self.event_source = "browser"
@@ -125,12 +116,3 @@ class EventTypeDistributionTaskReducerTest(ReducerTestMixin, unittest.TestCase):
         self.reduce_key = reduce_key
         expected = ((reduce_key, sum(values)),)
         self._check_output_complete_tuple(values, expected)
-
-    def create_task(self, interval='2013-01-01'):
-        """Create a task for testing purposes."""
-        fake_param = luigi.DateIntervalParameter()
-        self.task = EventTypeDistributionTask(
-            interval=fake_param.parse(interval),
-            output_root="/fake/output",
-            n_reduce_tasks=1,
-        )
