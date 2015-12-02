@@ -21,9 +21,6 @@ class BaseDeidentifyDumpTask(UserIdRemapperMixin, luigi.Task):
     course = luigi.Parameter()
     output_directory = luigi.Parameter()
     data_directory = luigi.Parameter()
-    seed_value = luigi.Parameter(
-        config_path={'section': 'encrypt', 'name': 'seed_value'}
-    )
 
     def output(self):
         if len(self.input()) == 0:

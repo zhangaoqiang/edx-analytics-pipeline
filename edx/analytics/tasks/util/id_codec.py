@@ -3,7 +3,7 @@
 import base64
 import numpy as np
 import random
-
+import luigi
 
 def encode_id(scope, id_type, id_value):
     """Encode a scope-type-value tuple into a single ID string."""
@@ -60,7 +60,10 @@ class PermutationGenerator(object):
 
 class UserIdRemapperMixin(object):
 
-    permutation_generator = PermutationGenerator(self.seed_value,32,32)
+    seed_value = luigi.Parameter(
+        config_path={'section': 'encrypt', 'name': 'seed_value'}
+    )
+    permutation_generator = PermutationGenerator(seed_value,32,32)
 
     @classmethod
     def remap_id(cls, id):
