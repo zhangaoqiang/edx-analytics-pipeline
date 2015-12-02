@@ -1,4 +1,4 @@
-"""Defines a reversible way to label an id with a scope and type to make it unique."""
+"""Various helper utilities to help do a 1-1 mapping of sensitive ids"""
 
 import base64
 import numpy as np
