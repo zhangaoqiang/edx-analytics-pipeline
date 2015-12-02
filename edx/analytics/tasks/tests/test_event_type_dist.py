@@ -88,7 +88,8 @@ class EventTypeDistributionTaskMapTest(MapperTestMixin, InitializeOpaqueKeysMixi
     def test_event_list_dictionary_mapping(self):
         """ Test if the file file parsing works correct."""
         line = self.create_event_log_line()
-        self.expected_key = (self.event_date, "unknown", self.event_type, self.event_source, False)
+        self.expected_keys = {(self.event_date, "unknown", self.event_type, self.event_source, False),
+                              (self.event_date, "hi", self.event_type, self.event_source, True), }
         self.assert_single_map_output(line, self.expected_key, 1)
 
 

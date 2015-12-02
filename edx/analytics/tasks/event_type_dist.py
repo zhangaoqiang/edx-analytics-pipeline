@@ -51,7 +51,7 @@ class EventTypeDistributionTask(EventLogSelectionMixin, MapReduceJobTask):
         if event_type.startswith('/'):
             # Ignore events that begin with a slash
             return
-        if (event_source, event_type) in self.known_events.iterkeys():
+        if (event_source, event_type) in self.known_events:
             event_category = self.known_events[(event_source, event_type)]
             exported = True
         else:
@@ -59,9 +59,7 @@ class EventTypeDistributionTask(EventLogSelectionMixin, MapReduceJobTask):
         yield (event_date, event_category, event_type, event_source, exported), 1
 
     def reducer(self, key, values):
-        reduce_key = key
-        event_count = sum(values)
-        yield (reduce_key), event_count
+        yield (key), sum(values)
 
     def output(self):
         return get_target_from_url(url_path_join(self.output_root, 'event_type_distribution/'))
@@ -72,6 +70,7 @@ class PushToVerticaEventTypeDistributionTask(VerticaCopyTask):
     output_root = luigi.Parameter()
     interval = luigi.DateIntervalParameter()
     n_reduce_tasks = luigi.Parameter()
+    events_list_file_path = luigi.Parameter(default=None)
 
     @property
     def table(self):
