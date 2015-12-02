@@ -60,7 +60,7 @@ class PermutationGenerator(object):
 
 class UserIdRemapperMixin(object):
 
-    permutation_generator = PermutationGenerator(42,32,32)
+    permutation_generator = PermutationGenerator(self.seed_value,32,32)
 
     @classmethod
     def remap_id(cls, id):

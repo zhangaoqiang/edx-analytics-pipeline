@@ -21,6 +21,9 @@ class BaseDeidentifyDumpTask(UserIdRemapperMixin, luigi.Task):
     course = luigi.Parameter()
     output_directory = luigi.Parameter()
     data_directory = luigi.Parameter()
+    seed_value = luigi.Parameter(
+        config_path={'section': 'encrypt', 'name': 'seed_value'}
+    )
 
     def output(self):
         if len(self.input()) == 0:
@@ -290,9 +293,8 @@ class DeidentifyDumpsTask(luigi.WrapperTask):
     course = luigi.Parameter(is_list=True)
     dump_root = luigi.Parameter()
     output_root = luigi.Parameter(
-        config_path={'section': 'rdx', 'name': 'output_root'}
+        config_path={'section': 'deidentify-dumps', 'name': 'output_root'}
     )
-    output_root = luigi.Parameter(default='hdfs://localhost:9000/edx-analytics-pipeline/output/')
 
     def requires(self):
         for course in self.course:
