@@ -1,6 +1,7 @@
+"""Deidentify course state files by removing/stubbing user information."""
+
 import luigi
 import luigi.s3
-import datetime
 import csv
 import json
 import os
@@ -17,6 +18,9 @@ log = logging.getLogger(__name__)
 
 
 class BaseDeidentifyDumpTask(UserIdRemapperMixin, luigi.Task):
+    """
+    Base class for deidentification of state files.
+    """
 
     course = luigi.Parameter()
     output_directory = luigi.Parameter()
@@ -36,6 +40,7 @@ class BaseDeidentifyDumpTask(UserIdRemapperMixin, luigi.Task):
 
 
 class DeidentifySqlDumpTask(BaseDeidentifyDumpTask):
+    """Task to deidentify an sql file."""
 
     def run(self):
         input_file = self.input()[0].open('r')
