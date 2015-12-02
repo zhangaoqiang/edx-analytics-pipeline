@@ -34,7 +34,6 @@ class EventTypeDistributionTask(EventLogSelectionMixin, MapReduceJobTask):
         for line in lines:
             if (not line.startswith('#')):
                 parts = line.split("\t")
-                print(parts)
                 parsed_events[(parts[1], parts[2])] = parts[0]
         return parsed_events
 
