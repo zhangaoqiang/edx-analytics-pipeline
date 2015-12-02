@@ -1,6 +1,8 @@
 """ test event type distribution task """
+import textwrap
 
 import luigi
+import os
 from ddt import ddt, data, unpack
 from edx.analytics.tasks.event_type_dist import EventTypeDistributionTask
 from edx.analytics.tasks.tests import unittest
@@ -13,11 +15,14 @@ class EventTypeDistributionTaskMapTest(MapperTestMixin, InitializeOpaqueKeysMixi
 
     def setUp(self):
         self.task_class = EventTypeDistributionTask
+        self.task_class.events_list_file_path = '/Users/umerfarooq/Documents/workspace/edx-analytics-pipeline/edx/analytics/tasks/tests/fixtures/events_list.tsv'
         super(EventTypeDistributionTaskMapTest, self).setUp()
 
         self.event_date = '2013-12-17'
         self.event_type = "test_event"
         self.event_source = "browser"
+        self.event_category = "test_category"
+        self.exported = True
         self.event_templates = {
             'event': {
                 "username": "test_user",
@@ -35,19 +40,14 @@ class EventTypeDistributionTaskMapTest(MapperTestMixin, InitializeOpaqueKeysMixi
                     "course_id": "course_id",
                     "user_id": "user_id",
                     "mode": "honor",
-
                 }
             }
         }
         self.default_event_template = 'event'
-        self.expected_key = (self.event_date, self.event_type, self.event_source)
+        self.expected_key = (self.event_date, self.event_category, self.event_type, self.event_source, self.exported)
 
     def test_no_event(self):
         line = 'this is garbage'
-        self.assert_no_map_output_for(line)
-
-    def test_unparseable_event(self):
-        line = 'this is garbage but contains edx.course.enrollment'
         self.assert_no_map_output_for(line)
 
     def test_event_type_none(self):
@@ -75,6 +75,20 @@ class EventTypeDistributionTaskMapTest(MapperTestMixin, InitializeOpaqueKeysMixi
         expected_value = 1
         self.assert_single_map_output(line, self.expected_key, expected_value)
 
+    def event_list_parsing(self):
+        self.events_list_file_path = os.path.join(self.data_dir, 'input', 'events_list.tsv')
+        parsing_result = self.event_list_parsing()
+        expected_parsing = {("browser", "edx.instructor.report.downloaded"):"admin",
+                            ("server", "add-forum-admin"):"admin",
+                            ("server", "add-forum-community-TA"):"admin",
+                            ("server", "add-forum-mod"):"admin",
+                            ("server", "add-instructor"):"admin"}
+        self.assertEquals(parsing_result,expected_parsing)
+
+    def reformat(string):
+            """Reformat string to make it like a TSV."""
+            return textwrap.dedent(string).strip().replace(' ', '\t')
+
 
 @ddt
 class EventTypeDistributionTaskReducerTest(ReducerTestMixin, unittest.TestCase):
@@ -82,6 +96,7 @@ class EventTypeDistributionTaskReducerTest(ReducerTestMixin, unittest.TestCase):
 
     def setUp(self):
         self.task_class = EventTypeDistributionTask
+        self.task_class.events_list_file_path = '/Users/umerfarooq/Documents/workspace/edx-analytics-pipeline/edx/analytics/tasks/tests/fixtures/events_list.tsv'
         super(EventTypeDistributionTaskReducerTest, self).setUp()
 
         # Create the task locally, since we only need to check certain attributes
@@ -119,4 +134,5 @@ class EventTypeDistributionTaskReducerTest(ReducerTestMixin, unittest.TestCase):
             interval=fake_param.parse(interval),
             output_root="/fake/output",
             n_reduce_tasks=1,
+            events_list_file_path = "fake_path",
         )

@@ -21,22 +21,25 @@ class EventTypeDistributionTask(EventLogSelectionMixin, MapReduceJobTask):
 
     def init_local(self):
         super(EventTypeDistributionTask, self).init_local()
-        self.known_events = {}
+        self.known_events = self.parse_events_list_file()
+
+    def parse_events_list_file(self):
         with self.input_local().open() as f_in:
             lines = filter(None, (line.rstrip() for line in f_in))
 
+        parsed_events = {}
         for line in lines:
             if(not line.startswith('#')):
                 parts = line.split("\t")
-                self.known_events[(parts[1],parts[2])] = parts[0]
+                parsed_events[(parts[1],parts[2])] = parts[0]
+
 
     def mapper(self, line):
         value = self.get_event_and_date_string(line)
         if value is None:
             return
-        event, date_string = value
+        event, event_date = value
         event_type = event.get('event_type')
-        event_date = date_string
         event_source = event.get('event_source')
         exported = False
         if event_source is None or event_type is None or event_date is None:
